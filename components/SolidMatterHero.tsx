@@ -58,7 +58,7 @@ export default function SolidMatterHero({ sections = [], onStart }: Props) {
           {/* Right: menu card */}
           <div className="md:pt-24">
             <div className="mx-auto max-w-sm rounded-3xl bg-white/12 p-6 text-white backdrop-blur ring-1 ring-white/20">
-              <h3 className="text-lg font-semibold mb-6">Choose your service</h3>
+              <h3 className="text-center text-3xl font-bold my-6">Choose a service</h3>
               <div className="flex flex-col gap-4">
                 <button
                   onClick={() => onStart?.(0)}
