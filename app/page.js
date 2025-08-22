@@ -248,29 +248,29 @@ export default function Page() {
               {/* Right: stacked call-to-action buttons */}
               <div className="md:pt-24">
                 <div className="mx-auto max-w-sm rounded-3xl bg-white/10 p-6 text-white backdrop-blur ring-1 ring-white/20">
-                  <h3 className="text-lg font-semibold mb-6">Choose a service</h3>
+                  <h3 className="text-center text-3xl font-bold my-6">Choose a service</h3>
                   <div className="flex flex-col gap-4">
                     <button
                       onClick={() => onLandingClick(0)}
-                      className="rounded-2xl px-6 py-4 bg-blue-700 text-white font-bold hover:bg-blue-800"
+                      className="rounded-3xl px-6 py-4 bg-blue-700 text-white font-bold hover:bg-blue-800"
                     >
                       Hotel Booking
                     </button>
                     <button
                       onClick={() => onLandingClick(1)}
-                      className="rounded-2xl px-6 py-4 bg-blue-700 text-white font-bold hover:bg-blue-800"
+                      className="rounded-3xl px-6 py-4 bg-blue-700 text-white font-bold hover:bg-blue-800"
                     >
                       Flights
                     </button>
                     <button
                       onClick={() => onLandingClick(2)}
-                      className="rounded-2xl px-6 py-4 bg-blue-700 text-white font-bold hover:bg-blue-800"
+                      className="rounded-3xl px-6 py-4 bg-blue-700 text-white font-bold hover:bg-blue-800"
                     >
                       Car Hire
                     </button>
                     <button
                       onClick={() => onLandingClick(3)}
-                      className="rounded-2xl px-6 py-4 bg-blue-700 text-white font-bold hover:bg-blue-800"
+                      className="rounded-3xl px-6 py-4 bg-blue-700 text-white font-bold hover:bg-blue-800"
                     >
                       Airport Transfer
                     </button>
