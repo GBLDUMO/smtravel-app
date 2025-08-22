@@ -17,7 +17,7 @@ export default function SolidMatterHero({
     <div className="relative min-h-screen overflow-hidden bg-[#0b1220]">
       {/* Background image with AVIF->JPG fallback */}
       <picture>
-        <source srcSet="/images/call-center-hero.avif" type="image/avif" />
+        <source srcSet="/images/call-center-hero.avif" type="images/avif" />
         <Img src="/images/call-center-hero.jpg" // <-- same folder as the .avif
           alt="Travel agents at work"
           fill
