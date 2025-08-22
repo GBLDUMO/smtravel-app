@@ -1,100 +1,92 @@
-"use client";
+'use client';
 
-import React from "react";
-import { motion } from "framer-motion";
-import { Plane, Hotel, Car, Navigation } from "lucide-react";
+import Image from 'next/image';
+import Link from 'next/link';
 
-const Container = ({ className = "", children }) => (
-  <div className={`mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 ${className}`}>{children}</div>
-);
+const CARD_STYLE =
+  'backdrop-blur-md bg-white/85 rounded-2xl shadow-xl border border-white/40';
 
-const CTAButtons = () => (
-  <div className="flex flex-col gap-4 items-start">
-    <button className="rounded-2xl px-6 py-4 shadow-sm transition inline-flex items-center justify-center gap-2 bg-blue-700 text-white font-bold hover:bg-blue-800">
-      <Hotel className="h-5 w-5" />
-      <span>Hotel Booking</span>
-    </button>
-    <button className="rounded-2xl px-6 py-4 shadow-sm transition inline-flex items-center justify-center gap-2 bg-blue-700 text-white font-bold hover:bg-blue-800">
-      <Plane className="h-5 w-5" />
-      <span>Flights</span>
-    </button>
-    <button className="rounded-2xl px-6 py-4 shadow-sm transition inline-flex items-center justify-center gap-2 bg-blue-700 text-white font-bold hover:bg-blue-800">
-      <Navigation className="h-5 w-5" />
-      <span>Airport Transfer</span>
-    </button>
-    <button className="rounded-2xl px-6 py-4 shadow-sm transition inline-flex items-center justify-center gap-2 bg-blue-700 text-white font-bold hover:bg-blue-800">
-      <Car className="h-5 w-5" />
-      <span>Car Hire</span>
-    </button>
-  </div>
-);
-
-const SummaryBlock = () => (
-  <div className="mt-6 text-sm leading-relaxed text-black/70">
-    <p>
-      <span className="font-bold text-blue-900">Solid Matter Travel</span> is your single hub for trip requests across
-      hotels, flights, transfers and car hire. One smart form, auto-filled details across sections, and direct routing to
-      our operations team for fast turnaround. Less typing, fewer back-and-forth emails, and a simple path from request
-      to confirmation.
-    </p>
-  </div>
-);
-
-const HeaderBar = () => (
-  <div className="flex items-center justify-between py-4">
-    <div className="flex items-center gap-3">
-      <div className="h-10 w-10 rounded-xl bg-white shadow flex items-center justify-center text-xs font-bold">SM</div>
-      <div className="text-lg font-semibold">Solid Matter Travel</div>
-    </div>
-  </div>
-);
-
-export default function SolidMatterHero() {
+export default function SolidMatterHero({
+  onPick,
+  sections = ['Hotel Booking', 'Flights', 'Car Hire', 'Airport Transfer'],
+}: {
+  onPick?: (index: number) => void;
+  sections?: string[];
+}) {
   return (
-    <div className="relative isolate min-h-[90vh] overflow-hidden rounded-3xl bg-slate-900">
-      {/* Background photo (remote so no file setup) */}
-      <img
-        src="https://img.freepik.com/premium-photo/call-center-employees-working-computers-office-business-people-workplace-customer-service-support-communication-team-telemarketing-helpline-assistance-with-headsets_590464-423526.jpg"
-        alt="Travel agents at work"
-        className="absolute inset-0 h-full w-full object-cover brightness-115 contrast-110"
-      />
+    <div className="relative min-h-screen overflow-hidden bg-[#0b1220]">
+      {/* Background image with AVIF->JPG fallback */}
+      <picture>
+        <source srcSet="/images/call-center-hero.avif" type="image/avif" />
+        <Img src="/images/call-center-hero.jpg" // <-- same folder as the .avif
+          alt="Travel agents at work"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover pointer-events-none select-none opacity-[0.22]"
+        />
+      </picture>
 
-      {/* Gradient for legibility */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-900/50 via-slate-900/30 to-slate-900/60" />
+      {/* Subtle vignette + tint so text stays readable */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_60%_at_50%_40%,rgba(255,255,255,0.10)_0%,rgba(11,18,32,0.85)_70%,rgba(11,18,32,1)_100%)]" />
 
-      {/* Africa silhouette overlay (subtle) */}
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-40">
+      {/* Logo (top-left) */}
+      <div className="absolute left-4 top-4 sm:left-8 sm:top-6 z-20">
+        {/* if you use next/image for the logo, keep it here; plain img is fine too */}
         <img
-          src="https://upload.wikimedia.org/wikipedia/commons/8/86/Africa_%28orthographic_projection%29.svg"
-          alt="Africa map silhouette"
-          className="max-h-[65%] max-w-[65%] object-contain mix-blend-overlay"
+          src="/logo.png"
+          alt="Solid Matter Travel"
+          className="h-16 w-auto rounded-md bg-white/90 p-2 shadow-lg border border-white/60"
         />
       </div>
 
-      <Container className="relative z-10">
-        <HeaderBar />
-        <div className="grid items-start gap-10 py-20 md:grid-cols-2">
-          {/* Left: welcome copy (placed just below halfway) */}
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-            <div className="rounded-3xl bg-white/90 p-8 shadow-xl backdrop-blur">
-              <h1 className="text-3xl sm:text-4xl">
-                <span className="block text-black">Welcome to</span>
-                <span className="font-bold text-blue-900">Solid Matter Travel</span>
-              </h1>
-              <p className="mt-2 text-base text-black/70">Manage all your bookings in one place.</p>
-              <SummaryBlock />
-            </div>
-          </motion.div>
-
-          {/* Right: actions */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}>
-            <div className="mx-auto max-w-md rounded-3xl bg-white/10 p-6 text-white backdrop-blur ring-1 ring-white/20 flex flex-col items-start">
-              <h3 className="text-lg font-semibold mb-6">Choose a service</h3>
-              <CTAButtons />
-            </div>
-          </motion.div>
+      {/* Content */}
+      <div className="relative z-10 mx-auto grid max-w-6xl grid-cols-1 gap-6 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:gap-10 lg:py-24">
+        {/* Welcome card */}
+        <div className={`${CARD_STYLE} p-6 sm:p-8`}>
+          <p className="text-2xl sm:text-3xl font-semibold text-[#0b3c91]">
+            Welcome to
+          </p>
+          <h1 className="mt-1 text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-[#0b3c91]">
+            <span className="text-[#0b3c91]">Solid Matter Travel</span>
+          </h1>
+          <p className="mt-3 text-sm sm:text-base text-slate-700">
+            Manage all your bookings in one place.
+          </p>
+          <p className="mt-4 text-sm sm:text-base text-slate-700 leading-relaxed">
+            <strong>Solid Matter Travel</strong> is your single hub for requests
+            across hotels, flights, car hire and airport transfers. One smart
+            form, auto‑filled details, and direct routing to our team for fast
+            confirmations.
+          </p>
         </div>
-      </Container>
+
+        {/* Menu card */}
+        <div className={`${CARD_STYLE} p-6 sm:p-8`}>
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-white drop-shadow [text-shadow:0_1px_0_rgba(0,0,0,.3)] mb-4">
+            Choose your service
+          </h2>
+
+          <div className="flex flex-col gap-3">
+            {sections.map((label, i) => (
+              <button
+                key={label}
+                onClick={() => onPick?.(i)}
+                className="w-full rounded-2xl bg-[#2563eb] hover:bg-[#1d4ed8] active:translate-y-px text-white font-semibold px-5 py-4 shadow-[0_10px_20px_rgba(37,99,235,.25)] border border-white/20 transition"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Optional: placeholder link (remove if not needed) */}
+          <div className="mt-4 text-xs text-slate-600">
+            <Link href="#" className="underline hover:no-underline">
+              Need assistance?
+            </Link>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
