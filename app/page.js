@@ -418,14 +418,22 @@ export default function Page() {
         </Modal>
       )}
 
-      {/* Centered THANK YOU POPUP (new) */}
+      {/* Centered THANK YOU POPUP */}
       {done && (
         <Modal>
           <div className="text-center">
-            <h3 className="modal-title">Thank you for the request, the team will contact you shortly.</h3>
+            <h3 className="modal-title">Thank you for your request!</h3>
             <p className="modal-copy">
-              You will receive a confirmation email for your booking.
+              Our team will contact you shortly. You will receive a confirmation email for your booking.
             </p>
+            <div className="modal-actions">
+              <button
+                onClick={() => setDone(false)}
+                className="brand-btn-primary"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </Modal>
       )}
@@ -464,7 +472,6 @@ export default function Page() {
           opacity: 0.6;
           cursor: not-allowed;
         }
-
         .brand-btn-secondary {
           padding: 0.6rem 1rem;
           border-radius: 9999px;
@@ -479,36 +486,41 @@ export default function Page() {
         .brand-btn-secondary:active {
           transform: translateY(1px);
         }
-
         .modal-backdrop {
           position: fixed;
           inset: 0;
-          background: rgba(0, 0, 0, 0.45);
+          background: rgba(0, 0, 0, 0.5);
           display: flex;
           align-items: center;
           justify-content: center;
-          z-index: 50;
+          min-height: 100vh;
+          z-index: 100;
+          transition: opacity 0.3s ease-in-out;
         }
         .modal-card {
-          width: min(92vw, 480px);
-          background: #fff;
+          width: min(90vw, 480px);
+          max-height: 80vh;
+          overflow-y: auto;
+          background: var(--brand-paper);
           border: 1px solid var(--brand-navy-22);
           border-radius: 1rem;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
-          padding: 1.25rem;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+          padding: 1.5rem;
+          transform: translateY(0);
+          transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
         }
         .modal-title {
           font-weight: 700;
           color: var(--brand-navy);
-          margin-bottom: 0.5rem;
-          font-size: 1.1rem;
+          margin-bottom: 0.75rem;
+          font-size: 1.25rem;
           text-align: center;
         }
         .modal-copy {
           color: var(--brand-ink);
-          opacity: 0.75;
-          font-size: 0.95rem;
-          margin-bottom: 0.25rem;
+          opacity: 0.8;
+          font-size: 1rem;
+          margin-bottom: 1rem;
           text-align: center;
         }
         .modal-actions {
