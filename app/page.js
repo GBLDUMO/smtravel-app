@@ -83,7 +83,7 @@ export default function Page() {
 
   // UX
   const [sending, setSending] = useState(false);
-  const [done, setDone] = useState(false);
+  const [done, setDone] = useState(false); // now drives the popup
 
   // car “touched” flags for mirroring
   const [carPickupTouched, setCarPickupTouched] = useState(false);
@@ -182,7 +182,7 @@ export default function Page() {
   }
 
   function thankAndReset(ms) {
-    setDone(true);
+    setDone(true); // show centered popup
     setTimeout(() => {
       setDone(false);
       resetAll();
@@ -397,20 +397,6 @@ export default function Page() {
                   )}
                 </div>
               </div>
-
-              {done && (
-                <p
-                  className="mt-6 p-3 rounded text-center"
-                  style={{
-                    background: 'var(--brand-green-15)',
-                    color: 'var(--brand-teal)',
-                    border: '1px solid var(--brand-green-33)',
-                  }}
-                >
-                  Thank you for submitting your booking. You will receive a confirmation email for your
-                  booking. Our team will be in touch shortly.
-                </p>
-              )}
             </div>
           </section>
         </div>
@@ -428,6 +414,18 @@ export default function Page() {
             <button onClick={() => includeSection(confirmSection)} className="brand-btn-primary">
               Yes
             </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Centered THANK YOU POPUP (new) */}
+      {done && (
+        <Modal>
+          <div className="text-center">
+            <h3 className="modal-title">Thank you for the request, the team will contact you shortly.</h3>
+            <p className="modal-copy">
+              You will receive a confirmation email for your booking.
+            </p>
           </div>
         </Modal>
       )}
@@ -510,7 +508,7 @@ export default function Page() {
           color: var(--brand-ink);
           opacity: 0.75;
           font-size: 0.95rem;
-          margin-bottom: 1rem;
+          margin-bottom: 0.25rem;
           text-align: center;
         }
         .modal-actions {
