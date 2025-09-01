@@ -15,7 +15,7 @@ import AirportTransfer from '@/components/AirportTransfer';
 import { SECTIONS, PROMPTABLE } from '@/lib/constants';
 import { isRequiredFilledFactory } from '@/lib/helpers';
 
-// ---- initial state slices
+// ---- initial state slices (UPDATED: dropdowns start BLANK)
 function initialContact() {
   return { fullName: '', email: '', phone: '' };
 }
@@ -26,21 +26,28 @@ function initialHotel() {
     checkOut: '',
     nights: 0,
     adults: 1,
-    hotelCategory: 'Budget',
-    mealType: 'Room Only',
-    roomType: 'Double',
+    hotelCategory: '', // was 'Budget' → blank
+    mealType: '',      // was 'Room Only' → blank (TRIGGER for Hotel)
+    roomType: '',      // was 'Double' → blank
     specificHotel: '',
     notes: '',
   };
 }
 function initialFlights() {
+  // TRIGGER = flights.to
   return { from: '', to: '', departDate: '', returnDate: '' };
 }
 function initialCar() {
-  return { carPickup: '', carReturn: '', carPickupDate: '', carReturnDate: '', carType: 'Small' };
+  return {
+    carPickup: '',
+    carReturn: '',
+    carPickupDate: '',
+    carReturnDate: '',
+    carType: '', // was 'Small' → blank (TRIGGER for Car)
+  };
 }
 function initialTransfer() {
-  return { tFrom: '', tTo: '', tDate: '', tType: 'One way' };
+  return { tFrom: '', tTo: '', tDate: '', tType: '' }; // was 'One way' → blank (TRIGGER for Transfer)
 }
 
 export default function Page() {
@@ -185,7 +192,7 @@ export default function Page() {
     setDone(true); // show centered popup
     setTimeout(() => {
       setDone(false);
-      resetAll();
+      resetAll(); // ⚠️ dropdowns reset to blank because initial*() now return '' for selects
     }, ms);
   }
 

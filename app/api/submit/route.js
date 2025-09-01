@@ -1,72 +1,89 @@
-// app/api/submit/route.js
 export const runtime = "nodejs";
 
 import * as React from "react";
 import { Resend } from "resend";
-import TravelBookingEmail from "../../../emails/TravelBookingEmail"; // if under /src, use ../../../../emails/TravelBookingEmail
+import TravelBookingEmail from "../../../emails/TravelBookingEmail"; // adjust ../ depth if needed
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM_EMAIL = process.env.SENDER_EMAIL;       // e.g. info@smtravel.co.za (verified)
-const BACKOFFICE = process.env.BACKOFFICE_EMAIL;   // e.g. info@smtravel.co.za
+const FROM_EMAIL = process.env.SENDER_EMAIL;
+const BACKOFFICE = process.env.BACKOFFICE_EMAIL;
 
-// Small helpers
-const isBlank = (v) => v === undefined || v === null || (typeof v === "string" && v.trim() === "");
+const isBlank = (v) =>
+  v === undefined ||
+  v === null ||
+  (typeof v === "string" && v.trim() === "");
+
 const addIf = (obj, key, value) => {
-  if (!isBlank(value)) obj[key] = typeof value === "string" ? value.trim() : value;
+  if (!isBlank(value)) {
+    obj[key] = typeof value === "string" ? value.trim() : value;
+  }
 };
-
-export async function GET() {
-  return Response.json({ ok: true, route: "/api/submit", method: "GET" });
-}
 
 export async function POST(req) {
   try {
     const body = await req.json();
 
-    // --- Pull user input safely ---
+    // Traveller
     const fullName = body.contact?.fullName;
     const userEmail = body.contact?.email;
-    const phone    = body.contact?.phone;
+    const phone = body.contact?.phone;
 
-    // Hotel / Trip
-    const destCity     = body.hotel?.destCity;
-    const checkIn      = body.hotel?.checkIn;
-    const checkOut     = body.hotel?.checkOut;
-    const nights       = body.hotel?.nights;
-    const adults       = body.hotel?.adults;
-    const hotelCategory= body.hotel?.hotelCategory;
-    const roomType     = body.hotel?.roomType;
-    const mealType     = body.hotel?.mealType;
-    const bookingRef   = body.hotel?.bookingRef || body.bookingRef; // optional
+    // Trip (shared)
+    const destCity = body.hotel?.destCity;
+    const checkIn = body.hotel?.checkIn;
+    const checkOut = body.hotel?.checkOut;
+    const nights = body.hotel?.nights;
+    const adults = body.hotel?.adults;
+    const bookingRef = body.hotel?.bookingRef || body.bookingRef;
 
-    // Flights
-    const from        = body.flights?.from;
-    const to          = body.flights?.to;
-    const departDate  = body.flights?.departDate;
+    // Hotel (trigger = mealType)
+    const hotelCategory = body.hotel?.hotelCategory;
+    const roomType = body.hotel?.roomType;
+    const mealType = body.hotel?.mealType; // TRIGGER
 
-    // Car
+    // Flights (trigger = to)
+    const from = body.flights?.from;
+    const to = body.flights?.to; // TRIGGER
+    const departDate = body.flights?.departDate;
+
+    // Car (UPDATED trigger = carReturnDate)
     const vehicleType = body.car?.carType;
-    const dropOffDate = body.car?.carReturnDate;
+    const dropOffDate = body.car?.carReturnDate; // TRIGGER
+    const carPickup = body.car?.carPickup;
+    const carReturn = body.car?.carReturn;
+    const carPickupDate = body.car?.carPickupDate;
+
+    // Transfer (trigger = tType)
+    const tFrom = body.transfer?.tFrom;
+    const tTo = body.transfer?.tTo;
+    const tDate = body.transfer?.tDate;
+    const tType = body.transfer?.tType; // TRIGGER
 
     // Notes
-    const notes       = body.hotel?.notes ?? body.notes;
+    const notes = body.hotel?.notes ?? body.notes;
 
-    // --- Required checks ---
+    // Required checks
     if (isBlank(userEmail)) {
-      return Response.json({ ok: false, error: "Missing recipient email" }, { status: 400 });
+      return Response.json(
+        { ok: false, error: "Missing recipient email" },
+        { status: 400 }
+      );
     }
     if (isBlank(FROM_EMAIL)) {
-      return Response.json({ ok: false, error: "Missing SENDER_EMAIL env var" }, { status: 500 });
+      return Response.json(
+        { ok: false, error: "Missing SENDER_EMAIL env var" },
+        { status: 500 }
+      );
     }
 
-    // --- Build clean props: ONLY non-empty fields are included ---
+    // Build props ONLY with completed sections
     const emailProps = {};
-    // Traveller
+
+    // Traveller & basic trip info (always safe to include if present)
     addIf(emailProps, "fullName", fullName);
     addIf(emailProps, "email", userEmail);
     addIf(emailProps, "phone", phone);
 
-    // Trip
     addIf(emailProps, "destCity", destCity);
     addIf(emailProps, "checkIn", checkIn);
     addIf(emailProps, "checkOut", checkOut);
@@ -74,26 +91,48 @@ export async function POST(req) {
     addIf(emailProps, "adults", adults);
     addIf(emailProps, "bookingRef", bookingRef);
 
-    // Preferences
-    addIf(emailProps, "hotelCategory", hotelCategory);
-    addIf(emailProps, "roomType", roomType);
-    addIf(emailProps, "mealType", mealType);
-    addIf(emailProps, "from", from);
-    addIf(emailProps, "to", to);
-    addIf(emailProps, "departDate", departDate);
-    addIf(emailProps, "vehicleType", vehicleType);
-    addIf(emailProps, "dropOffDate", dropOffDate);
+    // HOTEL — include only if TRIGGER present
+    if (!isBlank(mealType)) {
+      addIf(emailProps, "hotelCategory", hotelCategory);
+      addIf(emailProps, "roomType", roomType);
+      addIf(emailProps, "mealType", mealType); // trigger
+    }
 
-    // Notes
+    // FLIGHTS — include only if TRIGGER present
+    if (!isBlank(to)) {
+      addIf(emailProps, "from", from);
+      addIf(emailProps, "to", to); // trigger
+      addIf(emailProps, "departDate", departDate);
+    }
+
+    // CAR — UPDATED: include only if RETURN DATE (dropOffDate) present
+    if (!isBlank(dropOffDate)) {
+      addIf(emailProps, "vehicleType", vehicleType);
+      addIf(emailProps, "dropOffDate", dropOffDate); // trigger
+      addIf(emailProps, "carPickup", carPickup);
+      addIf(emailProps, "carReturn", carReturn);
+      addIf(emailProps, "carPickupDate", carPickupDate);
+    }
+
+    // TRANSFER — include only if TRIGGER present
+    if (!isBlank(tType)) {
+      addIf(emailProps, "tFrom", tFrom);
+      addIf(emailProps, "tTo", tTo);
+      addIf(emailProps, "tDate", tDate);
+      addIf(emailProps, "tType", tType); // trigger
+    }
+
+    // Notes (optional)
     addIf(emailProps, "notes", notes);
 
-    // --- Send email (React render handled by Resend) ---
+    // Send to user (and BCC backoffice if configured)
     const send = await resend.emails.send({
       from: FROM_EMAIL,
-      to: userEmail,                                 // Traveller gets the email
-      bcc: !isBlank(BACKOFFICE) ? [BACKOFFICE] : undefined, // Backoffice copy (optional)
+      to: userEmail,
+      bcc: !isBlank(BACKOFFICE) ? [BACKOFFICE] : undefined,
       reply_to: BACKOFFICE || undefined,
       subject: "We’ve received your travel request",
+      // Using Resend's React email rendering:
       react: <TravelBookingEmail {...emailProps} />,
     });
 
@@ -106,4 +145,8 @@ export async function POST(req) {
     console.error("SEND ERROR:", e);
     return Response.json({ ok: false, caught: String(e) }, { status: 500 });
   }
+}
+
+export async function GET() {
+  return Response.json({ ok: true, route: "/api/submit", method: "GET" });
 }

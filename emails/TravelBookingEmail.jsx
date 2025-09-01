@@ -2,16 +2,16 @@
 import * as React from "react";
 
 export default function TravelBookingEmail({
-  // Images (change anytime)
+  // Images
   logoUrl = "https://res.cloudinary.com/dmrvd8fwt/image/upload/v1755934208/Logo1_Use_xuoqgm.png",
   heroUrl = "https://res.cloudinary.com/dmrvd8fwt/image/upload/v1755934231/travel-companies-1_-_k7fhhj.webp",
 
-  // Traveller (empty by default so sections only show if provided)
+  // Traveller
   fullName = "",
   email = "",
   phone = "",
 
-  // Trip (empty by default)
+  // Trip
   destCity = "",
   checkIn = "",
   checkOut = "",
@@ -19,25 +19,36 @@ export default function TravelBookingEmail({
   adults = "",
   bookingRef = "",
 
-  // Preferences (empty by default)
+  // Hotel (trigger = mealType)
   hotelCategory = "",
   roomType = "",
   mealType = "",
+
+  // Flights (trigger = to)
   from = "",
   to = "",
   departDate = "",
+
+  // Car (trigger = vehicleType)
   vehicleType = "",
   dropOffDate = "",
+
+  // Transfer (trigger = tType)
+  tFrom = "",
+  tTo = "",
+  tDate = "",
+  tType = "",
 
   // Notes
   notes = "",
 }) {
-  // ====== Visibility helpers (only render completed sections) ======
+  // Section visibility based on triggers
   const hasTraveller = !!(fullName || email || phone);
   const hasTrip = !!(destCity || checkIn || checkOut || nights || adults || bookingRef);
-  const hasHotel = !!(destCity || hotelCategory || roomType || mealType);
-  const hasFlights = !!(from || to || departDate);
-  const hasCar = !!(destCity || departDate || vehicleType || dropOffDate);
+  const hasHotel = !!mealType;
+  const hasFlights = !!to;
+  const hasCar = !!vehicleType;
+  const hasTransfer = !!tType;
   const hasNotes = !!notes;
 
   const styles = {
@@ -55,7 +66,7 @@ export default function TravelBookingEmail({
     twoCol: { display: "flex", gap: 16, flexWrap: "wrap" },
     card: { background: "#FAFAFA", borderRadius: 10, padding: 14, fontSize: 12, marginBottom: 12, boxShadow: "0 2px 6px rgba(0,0,0,0.08)", flex: 1, minWidth: 260 },
     prefCard: { background: "#F9FFFE", border: "1px solid #E5FFFA", borderRadius: 10, padding: 12, fontSize: 12, boxShadow: "0 2px 6px rgba(0,0,0,0.08)", flex: 1 },
-    prefRow: { display: "flex", gap: 16, flexWrap: "nowrap" },
+    prefRow: { display: "flex", gap: 16, flexWrap: "wrap" },
     boxTitle: { fontSize: 16, color: "#0A2540", fontWeight: 700, display: "block", marginBottom: 6 },
     bold: { fontWeight: 700 },
     footer: { textAlign: "center", fontSize: 12, color: "#9CA3AF", padding: 16 },
@@ -64,11 +75,11 @@ export default function TravelBookingEmail({
   return (
     <div style={styles.body}>
       <div style={styles.wrapper}>
-        {/* Hero with logo on top-left */}
+        {/* Hero with logo */}
         <img src={heroUrl} alt="Hero" style={styles.headerImg} />
         <img src={logoUrl} alt="Solid Matter Travel" style={styles.logoTopLeft} />
 
-        {/* Centered text below hero */}
+        {/* Centered text */}
         <div style={styles.centerText}>
           <h1 style={styles.titleMain}>SOLID MATTER TRAVEL</h1>
           <p style={styles.subtitle}>We’ve got your request</p>
@@ -86,82 +97,84 @@ export default function TravelBookingEmail({
           </p>
         </div>
 
-        {/* Traveller + Trip (only render cards if data exists) */}
-        {hasTraveller || hasTrip ? (
+        {/* Traveller + Trip */}
+        {(hasTraveller || hasTrip) && (
           <div style={styles.section}>
             <div style={styles.twoCol}>
-              {hasTraveller ? (
+              {hasTraveller && (
                 <div style={styles.card}>
                   <span style={styles.boxTitle}>Traveller</span>
-                  {fullName ? (<><span style={styles.bold}>Name:</span> {fullName}<br /></>) : null}
-                  {email ? (<><span style={styles.bold}>E-mail:</span> <a href={`mailto:${email}`} style={{ color: "#0A2540", textDecoration: "none" }}>{email}</a><br /></>) : null}
-                  {phone ? (<><span style={styles.bold}>Phone:</span> {phone}</>) : null}
+                  {fullName && (<><span style={styles.bold}>Name:</span> {fullName}<br /></>)}
+                  {email && (<><span style={styles.bold}>E-mail:</span> <a href={`mailto:${email}`} style={{ color: "#0A2540", textDecoration: "none" }}>{email}</a><br /></>)}
+                  {phone && (<><span style={styles.bold}>Phone:</span> {phone}</>)}
                 </div>
-              ) : null}
-
-              {hasTrip ? (
+              )}
+              {hasTrip && (
                 <div style={styles.card}>
                   <span style={styles.boxTitle}>Trip</span>
-                  {destCity ? (<><span style={styles.bold}>Destination:</span> {destCity}<br /></>) : null}
-                  {checkIn || checkOut ? (
-                    <>
-                      <span style={styles.bold}>Dates:</span> {checkIn} {checkIn && checkOut ? "–" : ""} {checkOut}<br />
-                    </>
-                  ) : null}
-                  {nights ? (<><span style={styles.bold}>Nights:</span> {nights}<br /></>) : null}
-                  {adults ? (<><span style={styles.bold}>Guests:</span> {adults} adult(s)<br /></>) : null}
-                  {bookingRef ? (<><span style={styles.bold}>Booking Ref:</span> {bookingRef}</>) : null}
+                  {destCity && (<><span style={styles.bold}>Destination:</span> {destCity}<br /></>)}
+                  {(checkIn || checkOut) && (<><span style={styles.bold}>Dates:</span> {checkIn} {checkIn && checkOut ? "–" : ""} {checkOut}<br /></>)}
+                  {nights && (<><span style={styles.bold}>Nights:</span> {nights}<br /></>)}
+                  {adults && (<><span style={styles.bold}>Guests:</span> {adults} adult(s)<br /></>)}
+                  {bookingRef && (<><span style={styles.bold}>Booking Ref:</span> {bookingRef}</>)}
                 </div>
-              ) : null}
+              )}
             </div>
           </div>
-        ) : null}
+        )}
 
-        {/* Preferences — render only completed components */}
-        {(hasHotel || hasFlights || hasCar) ? (
+        {/* Preferences */}
+        {(hasHotel || hasFlights || hasCar || hasTransfer) && (
           <div style={styles.section}>
             <h3 style={{ margin: "0 0 10px", fontSize: 16, color: "#111827" }}>Preferences</h3>
             <div style={styles.prefRow}>
-              {hasHotel ? (
+              {hasHotel && (
                 <div style={styles.prefCard}>
                   <span style={styles.boxTitle}>Hotel</span>
-                  {destCity ? (<><span style={styles.bold}>Location:</span> {destCity}<br /></>) : null}
-                  {hotelCategory ? (<><span style={styles.bold}>Type:</span> {hotelCategory}<br /></>) : null}
-                  {roomType ? (<><span style={styles.bold}>Room Type:</span> {roomType}<br /></>) : null}
-                  {mealType ? (<><span style={styles.bold}>Meal type:</span> {mealType}</>) : null}
+                  {destCity && (<><span style={styles.bold}>Location:</span> {destCity}<br /></>)}
+                  {hotelCategory && (<><span style={styles.bold}>Type:</span> {hotelCategory}<br /></>)}
+                  {roomType && (<><span style={styles.bold}>Room Type:</span> {roomType}<br /></>)}
+                  <span style={styles.bold}>Meal type:</span> {mealType}
                 </div>
-              ) : null}
-
-              {hasFlights ? (
+              )}
+              {hasFlights && (
                 <div style={styles.prefCard}>
                   <span style={styles.boxTitle}>Flights</span>
-                  {departDate ? (<><span style={styles.bold}>Departure Date:</span> {departDate}<br /></>) : null}
-                  {(from || to) ? (<><span style={styles.bold}>Route:</span> {from} {from && to ? "→" : ""} {to}</>) : null}
+                  {departDate && (<><span style={styles.bold}>Departure Date:</span> {departDate}<br /></>)}
+                  <span style={styles.bold}>Route:</span> {from || "—"} {to ? "→" : ""} {to || "—"}
                 </div>
-              ) : null}
-
-              {hasCar ? (
+              )}
+              {hasCar && (
                 <div style={styles.prefCard}>
                   <span style={styles.boxTitle}>Car Hire</span>
-                  {destCity ? (<><span style={styles.bold}>Pick Up Location:</span> {destCity}<br /></>) : null}
-                  {departDate ? (<><span style={styles.bold}>Pick Up Date:</span> {departDate}<br /></>) : null}
-                  {vehicleType ? (<><span style={styles.bold}>Vehicle Type:</span> {vehicleType}<br /></>) : null}
-                  {dropOffDate ? (<><span style={styles.bold}>Drop Off Date:</span> {dropOffDate}</>) : null}
+                  {destCity && (<><span style={styles.bold}>Pick Up Location:</span> {destCity}<br /></>)}
+                  {departDate && (<><span style={styles.bold}>Pick Up Date:</span> {departDate}<br /></>)}
+                  <span style={styles.bold}>Vehicle Type:</span> {vehicleType}<br />
+                  {dropOffDate && (<><span style={styles.bold}>Drop Off Date:</span> {dropOffDate}</>)}
                 </div>
-              ) : null}
+              )}
+              {hasTransfer && (
+                <div style={styles.prefCard}>
+                  <span style={styles.boxTitle}>Airport Transfer</span>
+                  {tFrom && (<><span style={styles.bold}>From:</span> {tFrom}<br /></>)}
+                  {tTo && (<><span style={styles.bold}>To:</span> {tTo}<br /></>)}
+                  {tDate && (<><span style={styles.bold}>Date:</span> {tDate}<br /></>)}
+                  <span style={styles.bold}>Transfer type:</span> {tType}
+                </div>
+              )}
             </div>
           </div>
-        ) : null}
+        )}
 
         {/* Notes */}
-        {hasNotes ? (
+        {hasNotes && (
           <div style={styles.section}>
             <div style={styles.card}>
               <span style={styles.boxTitle}>Notes</span>
               {notes}
             </div>
           </div>
-        ) : null}
+        )}
       </div>
 
       {/* Footer */}
