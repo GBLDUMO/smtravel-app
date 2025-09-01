@@ -105,14 +105,17 @@ export async function POST(req) {
       addIf(emailProps, "departDate", departDate);
     }
 
-    // CAR — UPDATED: include only if RETURN DATE (dropOffDate) present
-    if (!isBlank(dropOffDate)) {
-      addIf(emailProps, "vehicleType", vehicleType);
-      addIf(emailProps, "dropOffDate", dropOffDate); // trigger
-      addIf(emailProps, "carPickup", carPickup);
-      addIf(emailProps, "carReturn", carReturn);
-      addIf(emailProps, "carPickupDate", carPickupDate);
-    }
+    // Car: include ONLY if trigger present
+if (!isBlank(vehicleType) || !isBlank(dropOffDate)) {
+  addIf(emailProps, "vehicleType", vehicleType);   // trigger
+  addIf(emailProps, "dropOffDate", dropOffDate);
+
+  // NEW: also include real fields if present
+  addIf(emailProps, "carPickup", carPickup);
+  addIf(emailProps, "carReturn", carReturn);
+  addIf(emailProps, "carPickupDate", carPickupDate);
+}
+
 
     // TRANSFER — include only if TRIGGER present
     if (!isBlank(tType)) {
