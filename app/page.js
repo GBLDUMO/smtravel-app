@@ -15,7 +15,7 @@ import AirportTransfer from '@/components/AirportTransfer';
 import { SECTIONS, PROMPTABLE } from '@/lib/constants';
 import { isRequiredFilledFactory } from '@/lib/helpers';
 
-// ---- initial state slices (UPDATED: dropdowns start BLANK)
+// ---- initial state slices (dropdowns start BLANK)
 function initialContact() {
   return { fullName: '', email: '', phone: '' };
 }
@@ -26,9 +26,9 @@ function initialHotel() {
     checkOut: '',
     nights: 0,
     adults: 1,
-    hotelCategory: '', // was 'Budget' → blank
-    mealType: '',      // was 'Room Only' → blank (TRIGGER for Hotel)
-    roomType: '',      // was 'Double' → blank
+    hotelCategory: '', // blank
+    mealType: '',      // blank (TRIGGER for Hotel)
+    roomType: '',      // blank
     specificHotel: '',
     notes: '',
   };
@@ -43,11 +43,12 @@ function initialCar() {
     carReturn: '',
     carPickupDate: '',
     carReturnDate: '',
-    carType: '', // was 'Small' → blank (TRIGGER for Car)
+    carType: '', // blank (TRIGGER for Car)
   };
 }
 function initialTransfer() {
-  return { tFrom: '', tTo: '', tDate: '', tType: '' }; // was 'One way' → blank (TRIGGER for Transfer)
+  // TRIGGER = tType
+  return { tFrom: '', tTo: '', tDate: '', tType: '' };
 }
 
 export default function Page() {
@@ -90,11 +91,14 @@ export default function Page() {
 
   // UX
   const [sending, setSending] = useState(false);
-  const [done, setDone] = useState(false); // now drives the popup
+  const [done, setDone] = useState(false); // drives the popup
 
   // car “touched” flags for mirroring
   const [carPickupTouched, setCarPickupTouched] = useState(false);
   const [carReturnTouched, setCarReturnTouched] = useState(false);
+
+  // turn off cross-section auto-fill after "Complete"
+  const [allowAutoFill, setAllowAutoFill] = useState(true);
 
   // validation checker bound to state
   const isRequiredFilled = isRequiredFilledFactory({ hotel, flights, car, transfer, enabled });
@@ -147,6 +151,7 @@ export default function Page() {
     }
   }
 
+  // ----- FIXED: async functions only once, no stray code after them
   async function submitFull() {
     if (tab === null || !isRequiredFilled(tab)) return;
     setSending(true);
@@ -160,6 +165,9 @@ export default function Page() {
       alert('Please finish the required fields first.');
       return;
     }
+    // stop auto-filling later sections so only the completed section is sent
+    setAllowAutoFill(false);
+
     setSending(true);
     await post({
       contact,
@@ -174,6 +182,7 @@ export default function Page() {
     setSending(false);
     thankAndReset(5000);
   }
+  // ----- end fixed area
 
   function resetAll() {
     setContact(initialContact());
@@ -186,21 +195,21 @@ export default function Page() {
     setCarReturnTouched(false);
     setConfirmSection(null);
     setTab(null);
+    setAllowAutoFill(true);
   }
 
   function thankAndReset(ms) {
     setDone(true); // show centered popup
     setTimeout(() => {
       setDone(false);
-      resetAll(); // ⚠️ dropdowns reset to blank because initial*() now return '' for selects
+      resetAll(); // dropdowns reset to blank because initial*() return '' for selects
     }, ms);
   }
 
   useEffect(() => {
     if (process.env.NODE_ENV === 'production') return;
     const root = document.querySelector('main');
-    const ok =
-      root && getComputedStyle(root).getPropertyValue('--brand-navy').trim() === '#0b3c91';
+    const ok = root && getComputedStyle(root).getPropertyValue('--brand-navy').trim() === '#0b3c91';
     console.table([{ test: 'CSS var --brand-navy set', pass: !!ok }]);
   }, []);
 
@@ -210,7 +219,6 @@ export default function Page() {
       {tab === null ? (
         <section className="mt-0">
           <div className="relative isolate min-h-screen w-screen left-1/2 right-1/2 -mx-[50vw] overflow-hidden bg-slate-900">
-            {/* Background photo with AVIF + JPG fallback (logo removed) */}
             <picture>
               <source srcSet="/images/call-center-hero.avif" type="image/avif" />
               <img
@@ -222,10 +230,8 @@ export default function Page() {
               />
             </picture>
 
-            {/* Subtle gradient for text legibility */}
             <div className="absolute inset-0 bg-gradient-to-br from-slate-900/50 via-slate-900/30 to-slate-900/60" />
 
-            {/* Africa map overlay (subtle) */}
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-35">
               <img
                 src="https://upload.wikimedia.org/wikipedia/commons/8/86/Africa_%28orthographic_projection%29.svg"
@@ -234,9 +240,7 @@ export default function Page() {
               />
             </div>
 
-            {/* Content inside the full-bleed hero */}
             <div className="relative z-10 max-w-5xl mx-auto px-4 md:px-8 py-16 md:py-24 grid items-start gap-10 md:grid-cols-2">
-              {/* Left: welcome card (slightly see-through but very readable) */}
               <div className="md:pt-10">
                 <div className="rounded-3xl bg-white/85 p-8 shadow-xl backdrop-blur">
                   <h1 className="text-3xl sm:text-4xl leading-tight">
@@ -247,12 +251,11 @@ export default function Page() {
                   <p className="mt-4 text-sm text-black/80">
                     <span className="font-semibold">Solid Matter Travel</span> is your single hub for
                     requests across hotels, flights, car hire and airport transfers. One smart form,
-                    auto‑filled details, and direct routing to our team for fast confirmations.
+                    auto-filled details, and direct routing to our team for fast confirmations.
                   </p>
                 </div>
               </div>
 
-              {/* Right: stacked call-to-action buttons */}
               <div className="md:pt-24">
                 <div className="mx-auto max-w-sm rounded-3xl bg-white/10 p-6 text-white backdrop-blur ring-1 ring-white/20">
                   <h3 className="text-center text-3xl font-bold my-6">Choose a service</h3>
@@ -336,8 +339,10 @@ export default function Page() {
                 <HotelBooking
                   hotel={hotel}
                   setHotel={(h) => {
-                    if (h.checkIn && !car.carPickupDate) setCar({ ...car, carPickupDate: h.checkIn });
-                    if (h.checkIn && !flights.departDate) setFlights({ ...flights, departDate: h.checkIn });
+                    if (allowAutoFill) {
+                      if (h.checkIn && !car.carPickupDate) setCar({ ...car, carPickupDate: h.checkIn });
+                      if (h.checkIn && !flights.departDate) setFlights({ ...flights, departDate: h.checkIn });
+                    }
                     setHotel(h);
                   }}
                 />
@@ -347,12 +352,14 @@ export default function Page() {
                 <Flights
                   flights={flights}
                   setFlights={(nf) => {
-                    const nextCar = { ...car };
-                    if (!carPickupTouched && nf.to) {
-                      nextCar.carPickup = nf.to;
-                      if (!carReturnTouched) nextCar.carReturn = nf.to;
+                    if (allowAutoFill) {
+                      const nextCar = { ...car };
+                      if (!carPickupTouched && nf.to) {
+                        nextCar.carPickup = nf.to;
+                        if (!carReturnTouched) nextCar.carReturn = nf.to;
+                      }
+                      setCar(nextCar);
                     }
-                    setCar(nextCar);
                     setFlights(nf);
                   }}
                 />
@@ -373,7 +380,11 @@ export default function Page() {
               )}
 
               {tab === 3 && enabled[3] !== false && (
-                <AirportTransfer transfer={transfer} flightsTo={flights.to} setTransfer={setTransfer} />
+                <AirportTransfer
+                  transfer={transfer}
+                  flightsTo={allowAutoFill ? flights.to : ''}
+                  setTransfer={setTransfer}
+                />
               )}
 
               {/* Buttons */}
@@ -434,10 +445,7 @@ export default function Page() {
               Our team will contact you shortly. You will receive a confirmation email for your booking.
             </p>
             <div className="modal-actions">
-              <button
-                onClick={() => setDone(false)}
-                className="brand-btn-primary"
-              >
+              <button onClick={() => setDone(false)} className="brand-btn-primary">
                 Close
               </button>
             </div>
@@ -528,7 +536,7 @@ export default function Page() {
           opacity: 0.8;
           font-size: 1rem;
           margin-bottom: 1rem;
-          text-align: center;
+          text-align: center.
         }
         .modal-actions {
           display: flex;

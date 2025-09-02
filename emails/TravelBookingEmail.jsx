@@ -28,10 +28,16 @@ export default function TravelBookingEmail({
   from = "",
   to = "",
   departDate = "",
+  returnDate = "",
 
-  // Car (trigger = vehicleType)
+  // Car (trigger = provided by API when section is completed)
   vehicleType = "",
   dropOffDate = "",
+
+  // NEW: real car fields (used if present)
+  carPickup = "",
+  carReturn = "",
+  carPickupDate = "",
 
   // Transfer (trigger = tType)
   tFrom = "",
@@ -42,13 +48,15 @@ export default function TravelBookingEmail({
   // Notes
   notes = "",
 }) {
-  // Section visibility based on triggers
+  // Section visibility
   const hasTraveller = !!(fullName || email || phone);
   const hasTrip = !!(destCity || checkIn || checkOut || nights || adults || bookingRef);
   const hasHotel = !!mealType;
   const hasFlights = !!to;
-  const hasCar = !!vehicleType;
-  const hasTransfer = !!tType;
+  // Show Car only when any car details arrive (API already gates on completion)
+  const hasCar = !!(vehicleType || dropOffDate || carPickup || carReturn || carPickupDate);
+  // Show Transfer when any transfer detail arrives (API already gates on completion)
+  const hasTransfer = !!(tFrom || tTo || tDate || tType);
   const hasNotes = !!notes;
 
   const styles = {
@@ -90,7 +98,7 @@ export default function TravelBookingEmail({
           <span style={styles.badge}>Booking summary</span>
           <h2 style={styles.h2}>Your details</h2>
           <p style={styles.pMuted}>
-            Please check all details. If any changes do let us know. {" "}
+            Please check all details. If any changes do let us know.{" "}
             <a href="mailto:admin@smtravel.co.za" style={{ color: "#0A2540", textDecoration: "none" }}>
               admin@smtravel.co.za
             </a>
@@ -137,29 +145,45 @@ export default function TravelBookingEmail({
                   <span style={styles.bold}>Meal type:</span> {mealType}
                 </div>
               )}
+
               {hasFlights && (
-                <div style={styles.prefCard}>
-                  <span style={styles.boxTitle}>Flights</span>
-                  {departDate && (<><span style={styles.bold}>Departure Date:</span> {departDate}<br /></>)}
-                  <span style={styles.bold}>Route:</span> {from || "—"} {to ? "→" : ""} {to || "—"}
-                </div>
-              )}
+  <div style={styles.prefCard}>
+    <span style={styles.boxTitle}>Flights</span>
+    {departDate && (
+      <>
+        <span style={styles.bold}>Departure Date:</span> {departDate}
+        <br />
+      </>
+    )}
+    {returnDate && (
+      <>
+        <span style={styles.bold}>Return Date:</span> {returnDate}
+        <br />
+      </>
+    )}
+    <span style={styles.bold}>Route:</span> {from || "—"} {to ? "→" : ""} {to || "—"}
+  </div>
+)}
+
+
               {hasCar && (
                 <div style={styles.prefCard}>
                   <span style={styles.boxTitle}>Car Hire</span>
-                  {destCity && (<><span style={styles.bold}>Pick Up Location:</span> {destCity}<br /></>)}
-                  {departDate && (<><span style={styles.bold}>Pick Up Date:</span> {departDate}<br /></>)}
-                  <span style={styles.bold}>Vehicle Type:</span> {vehicleType}<br />
+                  {carPickup && (<><span style={styles.bold}>Pick Up Location:</span> {carPickup}<br /></>)}
+                  {carReturn && (<><span style={styles.bold}>Return Location:</span> {carReturn}<br /></>)}
+                  {carPickupDate && (<><span style={styles.bold}>Pick Up Date:</span> {carPickupDate}<br /></>)}
+                  {vehicleType && (<><span style={styles.bold}>Vehicle Type:</span> {vehicleType}<br /></>)}
                   {dropOffDate && (<><span style={styles.bold}>Drop Off Date:</span> {dropOffDate}</>)}
                 </div>
               )}
+
               {hasTransfer && (
                 <div style={styles.prefCard}>
                   <span style={styles.boxTitle}>Airport Transfer</span>
                   {tFrom && (<><span style={styles.bold}>From:</span> {tFrom}<br /></>)}
                   {tTo && (<><span style={styles.bold}>To:</span> {tTo}<br /></>)}
                   {tDate && (<><span style={styles.bold}>Date:</span> {tDate}<br /></>)}
-                  <span style={styles.bold}>Transfer type:</span> {tType}
+                  {tType && (<><span style={styles.bold}>Transfer type:</span> {tType}</>)}
                 </div>
               )}
             </div>
