@@ -29,11 +29,11 @@ export async function POST(req) {
     const phone     = body.contact?.phone;
 
     // Trip (mostly comes from Hotel section today)
-    const destCity  = body.hotel?.destCity;
-    const checkIn   = body.hotel?.checkIn;
-    const checkOut  = body.hotel?.checkOut;
-    const nights    = body.hotel?.nights;
-    const adults    = body.hotel?.adults;
+    const destCity   = body.hotel?.destCity;
+    const checkIn    = body.hotel?.checkIn;
+    const checkOut   = body.hotel?.checkOut;
+    const nights     = body.hotel?.nights;
+    const adults     = body.hotel?.adults;
     const bookingRef = body.hotel?.bookingRef || body.bookingRef;
 
     // Hotel (trigger = mealType)
@@ -42,10 +42,10 @@ export async function POST(req) {
     const mealType      = body.hotel?.mealType;
 
     // Flights (trigger = to)
-    const from       = body.flights?.from;
-    const to         = body.flights?.to;
-    const departDate = body.flights?.departDate;
-    const returnDate = body.flights?.returnDate;
+    const from        = body.flights?.from;
+    const to          = body.flights?.to;
+    const departDate  = body.flights?.departDate;
+    const returnDate  = body.flights?.returnDate;
 
     // Car (triggered by vehicleType in this API)
     const vehicleType   = body.car?.carType;
@@ -54,11 +54,12 @@ export async function POST(req) {
     const carReturn     = body.car?.carReturn;
     const carPickupDate = body.car?.carPickupDate;
 
-    // Transfer (trigger = tType)
-    const tFrom = body.transfer?.tFrom;
-    const tTo   = body.transfer?.tTo;
-    const tDate = body.transfer?.tDate;
-    const tType = body.transfer?.tType;
+    // Airport Transfer (robust mapping + include if any transfer fields exist)
+    // Accept either tFrom/tTo/tDate/tType OR from/to/date/transferType
+    const tFrom = body.transfer?.tFrom ?? body.transfer?.from ?? "";
+    const tTo   = body.transfer?.tTo   ?? body.transfer?.to   ?? "";
+    const tDate = body.transfer?.tDate ?? body.transfer?.date ?? "";
+    const tType = body.transfer?.tType ?? body.transfer?.transferType ?? "";
 
     const notes = body.hotel?.notes ?? body.notes;
 
@@ -85,14 +86,14 @@ export async function POST(req) {
     addIf(emailProps, "adults", adults);
     addIf(emailProps, "bookingRef", bookingRef);
 
-    // Hotel: include only if trigger present
+    // Hotel: include only if trigger present (mealType)
     if (!isBlank(mealType)) {
       addIf(emailProps, "hotelCategory", hotelCategory);
       addIf(emailProps, "roomType", roomType);
       addIf(emailProps, "mealType", mealType);
     }
 
-    // Flights: include only if trigger present
+    // Flights: include only if trigger present (to)
     if (!isBlank(to)) {
       addIf(emailProps, "from", from);
       addIf(emailProps, "to", to);
@@ -109,8 +110,8 @@ export async function POST(req) {
       addIf(emailProps, "carPickupDate", carPickupDate);
     }
 
-    // Transfer: include only if trigger present
-    if (!isBlank(tType)) {
+    // Airport Transfer: include if ANY transfer field is present (tType OR tFrom/tTo/tDate)
+    if (tType || tFrom || tTo || tDate) {
       addIf(emailProps, "tFrom", tFrom);
       addIf(emailProps, "tTo", tTo);
       addIf(emailProps, "tDate", tDate);

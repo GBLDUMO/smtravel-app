@@ -30,11 +30,15 @@ export default function TravelBookingEmail({
   departDate = "",
   returnDate = "",
 
-  // Car (trigger = provided by API when section is completed)
+  // 🔹 NEW: extra flight legs (optional)
+  // Each: { from, to, departDate, tripType, returnDate }
+  flightSegments = [],
+
+  // Car (trigger = vehicleType)
   vehicleType = "",
   dropOffDate = "",
 
-  // NEW: real car fields (used if present)
+  // Real car fields (used if present)
   carPickup = "",
   carReturn = "",
   carPickupDate = "",
@@ -48,14 +52,19 @@ export default function TravelBookingEmail({
   // Notes
   notes = "",
 }) {
-  // Section visibility
+  // Safe number for adults
+  const adultsCount = Number(adults) || 0;
+
+  // Section visibility based on triggers
+  const segments = Array.isArray(flightSegments) ? flightSegments : [];
   const hasTraveller = !!(fullName || email || phone);
-  const hasTrip = !!(destCity || checkIn || checkOut || nights || adults || bookingRef);
+  const hasTrip = !!(destCity || checkIn || checkOut || nights || adultsCount || bookingRef);
   const hasHotel = !!mealType;
-  const hasFlights = !!to;
-  // Show Car only when any car details arrive (API already gates on completion)
+
+  // Flights: true if the main "to" exists OR any segment has a "to"
+  const hasFlights = !!(to || segments.some((s) => s && (s.to || s.from || s.departDate)));
+
   const hasCar = !!(vehicleType || dropOffDate || carPickup || carReturn || carPickupDate);
-  // Show Transfer when any transfer detail arrives (API already gates on completion)
   const hasTransfer = !!(tFrom || tTo || tDate || tType);
   const hasNotes = !!notes;
 
@@ -78,6 +87,39 @@ export default function TravelBookingEmail({
     boxTitle: { fontSize: 16, color: "#0A2540", fontWeight: 700, display: "block", marginBottom: 6 },
     bold: { fontWeight: 700 },
     footer: { textAlign: "center", fontSize: 12, color: "#9CA3AF", padding: 16 },
+    list: { margin: "6px 0 0 0", paddingLeft: 18 },
+    li: { marginBottom: 6 },
+    mono: { fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace" },
+  };
+
+  // Helper to format one flight line neatly
+  const renderFlightLine = ({ from, to, departDate, tripType, returnDate }) => {
+    const hasReturn = tripType === "Return" && returnDate;
+    return (
+      <div>
+        <span style={styles.bold}>Route:</span>{" "}
+        <span style={styles.mono}>{from || "—"}</span> {to ? "→" : ""}{" "}
+        <span style={styles.mono}>{to || "—"}</span>
+        <br />
+        {departDate && (
+          <>
+            <span style={styles.bold}>Departure Date:</span> {departDate}
+            <br />
+          </>
+        )}
+        {tripType && (
+          <>
+            <span style={styles.bold}>Trip Type:</span> {tripType}
+            <br />
+          </>
+        )}
+        {hasReturn && (
+          <>
+            <span style={styles.bold}>Return Date:</span> {returnDate}
+          </>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -112,19 +154,60 @@ export default function TravelBookingEmail({
               {hasTraveller && (
                 <div style={styles.card}>
                   <span style={styles.boxTitle}>Traveller</span>
-                  {fullName && (<><span style={styles.bold}>Name:</span> {fullName}<br /></>)}
-                  {email && (<><span style={styles.bold}>E-mail:</span> <a href={`mailto:${email}`} style={{ color: "#0A2540", textDecoration: "none" }}>{email}</a><br /></>)}
-                  {phone && (<><span style={styles.bold}>Phone:</span> {phone}</>)}
+                  {fullName && (
+                    <>
+                      <span style={styles.bold}>Name:</span> {fullName}
+                      <br />
+                    </>
+                  )}
+                  {email && (
+                    <>
+                      <span style={styles.bold}>E-mail:</span>{" "}
+                      <a href={`mailto:${email}`} style={{ color: "#0A2540", textDecoration: "none" }}>
+                        {email}
+                      </a>
+                      <br />
+                    </>
+                  )}
+                  {phone && (
+                    <>
+                      <span style={styles.bold}>Phone:</span> {phone}
+                    </>
+                  )}
                 </div>
               )}
               {hasTrip && (
                 <div style={styles.card}>
                   <span style={styles.boxTitle}>Trip</span>
-                  {destCity && (<><span style={styles.bold}>Destination:</span> {destCity}<br /></>)}
-                  {(checkIn || checkOut) && (<><span style={styles.bold}>Dates:</span> {checkIn} {checkIn && checkOut ? "–" : ""} {checkOut}<br /></>)}
-                  {nights && (<><span style={styles.bold}>Nights:</span> {nights}<br /></>)}
-                  {adults && (<><span style={styles.bold}>Guests:</span> {adults} adult(s)<br /></>)}
-                  {bookingRef && (<><span style={styles.bold}>Booking Ref:</span> {bookingRef}</>)}
+                  {destCity && (
+                    <>
+                      <span style={styles.bold}>Destination:</span> {destCity}
+                      <br />
+                    </>
+                  )}
+                  {(checkIn || checkOut) && (
+                    <>
+                      <span style={styles.bold}>Dates:</span> {checkIn} {checkIn && checkOut ? "–" : ""} {checkOut}
+                      <br />
+                    </>
+                  )}
+                  {nights && (
+                    <>
+                      <span style={styles.bold}>Nights:</span> {nights}
+                      <br />
+                    </>
+                  )}
+                  {adultsCount > 0 && (
+                    <>
+                      <span style={styles.bold}>Guests:</span> {adultsCount} adult(s)
+                      <br />
+                    </>
+                  )}
+                  {bookingRef && (
+                    <>
+                      <span style={styles.bold}>Booking Ref:</span> {bookingRef}
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -139,51 +222,109 @@ export default function TravelBookingEmail({
               {hasHotel && (
                 <div style={styles.prefCard}>
                   <span style={styles.boxTitle}>Hotel</span>
-                  {destCity && (<><span style={styles.bold}>Location:</span> {destCity}<br /></>)}
-                  {hotelCategory && (<><span style={styles.bold}>Type:</span> {hotelCategory}<br /></>)}
-                  {roomType && (<><span style={styles.bold}>Room Type:</span> {roomType}<br /></>)}
+                  {destCity && (
+                    <>
+                      <span style={styles.bold}>Location:</span> {destCity}
+                      <br />
+                    </>
+                  )}
+                  {hotelCategory && (
+                    <>
+                      <span style={styles.bold}>Type:</span> {hotelCategory}
+                      <br />
+                    </>
+                  )}
+                  {roomType && (
+                    <>
+                      <span style={styles.bold}>Room Type:</span> {roomType}
+                      <br />
+                    </>
+                  )}
                   <span style={styles.bold}>Meal type:</span> {mealType}
                 </div>
               )}
 
               {hasFlights && (
-  <div style={styles.prefCard}>
-    <span style={styles.boxTitle}>Flights</span>
-    {departDate && (
-      <>
-        <span style={styles.bold}>Departure Date:</span> {departDate}
-        <br />
-      </>
-    )}
-    {returnDate && (
-      <>
-        <span style={styles.bold}>Return Date:</span> {returnDate}
-        <br />
-      </>
-    )}
-    <span style={styles.bold}>Route:</span> {from || "—"} {to ? "→" : ""} {to || "—"}
-  </div>
-)}
+                <div style={styles.prefCard}>
+                  <span style={styles.boxTitle}>Flights</span>
 
+                  {/* Main leg (original fields) */}
+                  {(from || to || departDate || returnDate) &&
+                    renderFlightLine({ from, to, departDate, tripType: returnDate ? "Return" : "One Way", returnDate })}
+
+                  {/* Extra legs (if any) */}
+                  {segments.length > 0 && (
+                    <div style={{ marginTop: 10 }}>
+                      <span style={styles.bold}>Additional legs:</span>
+                      <ul style={styles.list}>
+                        {segments.map((seg, idx) => (
+                          <li key={idx} style={styles.li}>
+                            {renderFlightLine(seg)}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {hasCar && (
                 <div style={styles.prefCard}>
                   <span style={styles.boxTitle}>Car Hire</span>
-                  {carPickup && (<><span style={styles.bold}>Pick Up Location:</span> {carPickup}<br /></>)}
-                  {carReturn && (<><span style={styles.bold}>Return Location:</span> {carReturn}<br /></>)}
-                  {carPickupDate && (<><span style={styles.bold}>Pick Up Date:</span> {carPickupDate}<br /></>)}
-                  {vehicleType && (<><span style={styles.bold}>Vehicle Type:</span> {vehicleType}<br /></>)}
-                  {dropOffDate && (<><span style={styles.bold}>Drop Off Date:</span> {dropOffDate}</>)}
+                  {carPickup && (
+                    <>
+                      <span style={styles.bold}>Pick Up Location:</span> {carPickup}
+                      <br />
+                    </>
+                  )}
+                  {carReturn && (
+                    <>
+                      <span style={styles.bold}>Return Location:</span> {carReturn}
+                      <br />
+                    </>
+                  )}
+                  {carPickupDate && (
+                    <>
+                      <span style={styles.bold}>Pick Up Date:</span> {carPickupDate}
+                      <br />
+                    </>
+                  )}
+                  {vehicleType && (
+                    <>
+                      <span style={styles.bold}>Vehicle Type:</span> {vehicleType}
+                      <br />
+                    </>
+                  )}
+                  {dropOffDate && (
+                    <>
+                      <span style={styles.bold}>Drop Off Date:</span> {dropOffDate}
+                    </>
+                  )}
                 </div>
               )}
 
               {hasTransfer && (
                 <div style={styles.prefCard}>
                   <span style={styles.boxTitle}>Airport Transfer</span>
-                  {tFrom && (<><span style={styles.bold}>From:</span> {tFrom}<br /></>)}
-                  {tTo && (<><span style={styles.bold}>To:</span> {tTo}<br /></>)}
-                  {tDate && (<><span style={styles.bold}>Date:</span> {tDate}<br /></>)}
-                  {tType && (<><span style={styles.bold}>Transfer type:</span> {tType}</>)}
+                  {tFrom && (
+                    <>
+                      <span style={styles.bold}>From:</span> {tFrom}
+                      <br />
+                    </>
+                  )}
+                  {tTo && (
+                    <>
+                      <span style={styles.bold}>To:</span> {tTo}
+                      <br />
+                    </>
+                  )}
+                  {tDate && (
+                    <>
+                      <span style={styles.bold}>Date:</span> {tDate}
+                      <br />
+                    </>
+                  )}
+                  <span style={styles.bold}>Transfer type:</span> {tType}
                 </div>
               )}
             </div>

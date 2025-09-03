@@ -34,9 +34,17 @@ function initialHotel() {
   };
 }
 function initialFlights() {
-  // TRIGGER = flights.to
-  return { from: '', to: '', departDate: '', returnDate: '' };
+  return {
+    from: '',
+    to: '',
+    departDate: '',
+    returnDate: '',
+    tripType: '',
+    segments: [], // <-- add this
+  };
 }
+
+
 function initialCar() {
   return {
     carPickup: '',
@@ -309,7 +317,7 @@ export default function Page() {
 
             {/* Shared contact row */}
             <div className="px-4 md:px-6 py-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-              <Field label="Full name">
+              <Field label="Main Traveller Name">
                 <input
                   className="brand-input w-full"
                   value={contact.fullName}
