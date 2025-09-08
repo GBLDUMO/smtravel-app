@@ -6,6 +6,9 @@ export default function TravelBookingEmail({
   logoUrl = "https://res.cloudinary.com/dmrvd8fwt/image/upload/v1755934208/Logo1_Use_xuoqgm.png",
   heroUrl = "https://res.cloudinary.com/dmrvd8fwt/image/upload/v1755934231/travel-companies-1_-_k7fhhj.webp",
 
+  // NEW: Quote Reference (e.g., SMT-Q10100)
+  quoteRef = "",
+
   // Traveller
   fullName = "",
   email = "",
@@ -145,6 +148,14 @@ export default function TravelBookingEmail({
         <div style={styles.section}>
           <span style={styles.badge}>Booking summary</span>
           <h2 style={styles.h2}>Your details</h2>
+
+          {/* NEW: Quote Reference */}
+          {quoteRef && (
+            <p style={{ fontSize: 14, fontWeight: 600, color: "#0A2540", margin: "4px 0 8px" }}>
+              Quote Reference: <span style={{ fontWeight: 800 }}>{quoteRef}</span>
+            </p>
+          )}
+
           <p style={styles.pMuted}>
             Please check all details. If any changes do let us know.{" "}
             <a href="mailto:admin@smtravel.co.za" style={{ color: "#0A2540", textDecoration: "none" }}>

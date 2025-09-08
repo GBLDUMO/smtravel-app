@@ -5,6 +5,31 @@ import * as React from "react";
 import { Resend } from "resend";
 import TravelBookingEmail from "../../../emails/TravelBookingEmail";
 
+// NEW: simple file-based counter for quote refs
+import { promises as fs } from "fs";
+const COUNTER_FILE = "/tmp/smt_quote_counter.txt";
+const COUNTER_START = 10100; // first number => SMT-Q10100
+
+async function getNextQuoteRef() {
+  try {
+    let n;
+    try {
+      const raw = await fs.readFile(COUNTER_FILE, "utf8");
+      n = parseInt(raw.trim(), 10);
+      if (!Number.isFinite(n)) n = COUNTER_START;
+    } catch {
+      n = COUNTER_START; // if file missing on cold start
+    }
+    const next = n + 1;
+    await fs.writeFile(COUNTER_FILE, String(next), "utf8");
+    return `SMT-Q${n}`;
+  } catch {
+    // Fallback: time-based (still unique-ish) if /tmp fails for any reason
+    const fallback = Date.now().toString().slice(-6);
+    return `SMT-Q${fallback}`;
+  }
+}
+
 // --- Resend setup (env vars)
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.SENDER_EMAIL;     // e.g. info@smtravel.co.za (must be verified in Resend)
@@ -150,13 +175,17 @@ export async function POST(req) {
     // Global notes
     addIf(emailProps, "notes", notes);
 
+    // NEW: Generate & attach Quote Reference
+    const quoteRef = await getNextQuoteRef();
+    addIf(emailProps, "quoteRef", quoteRef);
+
     // --- Send email via Resend
     const send = await resend.emails.send({
       from: FROM_EMAIL,
       to: userEmail,
       bcc: !isBlank(BACKOFFICE) ? [BACKOFFICE] : undefined,
       reply_to: BACKOFFICE || undefined,
-      subject: "We’ve received your travel request",
+      subject: `We’ve received your travel request — ${quoteRef}`,
       react: <TravelBookingEmail {...emailProps} />,
     });
 
@@ -164,6 +193,7 @@ export async function POST(req) {
       ok: !!send.data?.id,
       id: send.data?.id ?? null,
       error: send.error ?? null,
+      quoteRef, // echo back for logs/UI if needed
     });
   } catch (e) {
     console.error("SEND ERROR:", e);
