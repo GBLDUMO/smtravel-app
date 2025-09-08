@@ -1,129 +1,183 @@
 'use client';
 
-import { useEffect } from 'react';
 import Field from '@/components/Field';
 
 export default function HotelBooking({ hotel, setHotel }) {
-  const set = (field) => (e) => setHotel({ ...hotel, [field]: e.target.value });
+  const c = hotel || {};
+  const set = (k) => (e) => setHotel({ ...c, [k]: e.target.value });
 
-  // Auto-calculate nights when checkIn or checkOut changes
-  useEffect(() => {
-    if (hotel.checkIn && hotel.checkOut) {
-      const checkInDate = new Date(hotel.checkIn);
-      const checkOutDate = new Date(hotel.checkOut);
+  // Helper: calculate night count from two YYYY-MM-DD strings
+  const calcNights = (inStr, outStr) => {
+    if (!inStr || !outStr) return 0;
+    const inDate = new Date(inStr);
+    const outDate = new Date(outStr);
+    const ms = outDate - inDate;
+    const nights = Math.floor(ms / (1000 * 60 * 60 * 24));
+    return nights > 0 ? nights : 0;
+  };
 
-      if (checkOutDate > checkInDate) {
-        const diffTime = checkOutDate - checkInDate;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // convert ms → days
-        if (hotel.nights !== diffDays) {
-          setHotel({ ...hotel, nights: diffDays });
-        }
-      }
-    }
-  }, [hotel.checkIn, hotel.checkOut]);
+  const onCheckInChange = (e) => {
+    const checkIn = e.target.value;
+    const nights = calcNights(checkIn, c.checkOut);
+    setHotel({ ...c, checkIn, nights });
+  };
+
+  const onCheckOutChange = (e) => {
+    const checkOut = e.target.value;
+    const nights = calcNights(c.checkIn, checkOut);
+    setHotel({ ...c, checkOut, nights });
+  };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <Field label="Destination City">
-        <input
-          className="brand-input w-full"
-          value={hotel.destCity}
-          onChange={set('destCity')}
-        />
-      </Field>
+    <>
+      <h2 className="text-lg font-semibold mb-3">Hotel Booking</h2>
 
-      {/* Check-in and Check-out side by side */}
-      <div className="grid grid-cols-2 gap-4 col-span-2">
-        <Field label="Check-in">
+      <div className="grid md:grid-cols-2 gap-4">
+        {/* Make Destination span both columns so the next row lines up */}
+        <div className="md:col-span-2">
+          <Field label="Destination city">
+              <input
+             className="brand-input"
+             value={c.destCity || ''}
+             onChange={set('destCity')}
+               placeholder="e.g. Cape Town"
+             maxLength={25}   // user can’t type more than 25 characters
+             size={25}        // box width ~ 25 characters
+                  />
+            </Field>
+
+        </div>
+
+        {/* Row: Check-in | Check-out */}
+        <Field label="Check-in date">
           <input
             type="date"
             className="brand-input w-full"
-            value={hotel.checkIn}
-            onChange={set('checkIn')}
+            value={c.checkIn || ''}
+            onChange={onCheckInChange}
           />
         </Field>
-        <Field label="Check-out">
+
+        <Field label="Check-out date">
           <input
             type="date"
             className="brand-input w-full"
-            value={hotel.checkOut}
-            onChange={set('checkOut')}
+            value={c.checkOut || ''}
+            onChange={onCheckOutChange}
           />
         </Field>
+
+        {/* Row: No of Traveler(s) | No of Rooms */}
+        <Field label="No of Traveler(s)">
+          <input
+            type="number"
+            min={1}
+            className="brand-input w-full"
+            value={c.adults ?? ''}
+            onChange={set('adults')}
+            placeholder="e.g. 2"
+            required
+          />
+        </Field>
+
+        <Field label="No of Rooms">
+          <select
+            className="brand-input w-full"
+            value={c.rooms ?? ''}
+            onChange={set('rooms')}
+            required
+          >
+            <option value="">— Select —</option>
+            <option value="0">0</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+          </select>
+        </Field>
+
+        {/* Nights (auto) */}
+        <Field label="Nights">
+          <input
+            type="number"
+            className="brand-input w-full"
+            value={c.nights ?? 0}
+            readOnly
+          />
+        </Field>
+
+        {/* Hotel category */}
+        <Field label="Hotel category">
+          <select
+            className="brand-input w-full"
+            value={c.hotelCategory || ''}
+            onChange={set('hotelCategory')}
+          >
+            <option value="">— Select —</option>
+            <option>Budget</option>
+            <option>Mid-range</option>
+            <option>Luxury</option>
+            <option>5-Star Luxury</option>
+          </select>
+        </Field>
+
+        {/* Meal type (trigger for hotel section inclusion in email) */}
+        <Field label="Meal type (required to include Hotel in email)">
+          <select
+            className="brand-input w-full"
+            value={c.mealType || ''}
+            onChange={set('mealType')}
+            required
+          >
+            <option value="">— Select —</option>
+            <option>Room Only</option>
+            <option>Breakfast</option>
+            <option>Half Board</option>
+            <option>Full Board</option>
+            <option>All Inclusive</option>
+          </select>
+        </Field>
+
+        {/* Room type */}
+        <Field label="Room type">
+          <select
+            className="brand-input w-full"
+            value={c.roomType || ''}
+            onChange={set('roomType')}
+          >
+            <option value="">— Select —</option>
+            <option>Single</option>
+            <option>Double</option>
+            <option>Twin</option>
+            <option>Suite</option>
+          </select>
+        </Field>
+
+        {/* Specific hotel */}
+        <Field label="Specific hotel (optional)">
+          <input
+            className="brand-input w-full"
+            value={c.specificHotel || ''}
+            onChange={set('specificHotel')}
+            placeholder="If you have a preference"
+          />
+        </Field>
+
+        {/* Notes */}
+        <div className="md:col-span-2">
+          <Field label="Notes (optional)">
+            <textarea
+              className="brand-input w-full"
+              rows={3}
+              value={c.notes || ''}
+              onChange={set('notes')}
+              placeholder="Any special requests"
+            />
+          </Field>
+        </div>
       </div>
-
-      {/* Nights (calculated, readonly) */}
-      <Field label="Nights">
-        <input
-          type="number"
-          className="brand-input w-20"
-          value={hotel.nights}
-          readOnly
-        />
-      </Field>
-
-      <Field label="Adults">
-        <input
-          type="number"
-          className="brand-input w-full"
-          value={hotel.adults}
-          onChange={set('adults')}
-        />
-      </Field>
-
-      <Field label="Hotel Category">
-        <select
-          className="brand-input w-full"
-          value={hotel.hotelCategory}
-          onChange={set('hotelCategory')}
-        >
-          <option value="Budget">Budget</option>
-          <option value="Mid-range">Mid-range</option>
-          <option value="Luxury">Luxury</option>
-        </select>
-      </Field>
-
-      <Field label="Room Type">
-        <select
-          className="brand-input w-full"
-          value={hotel.roomType}
-          onChange={set('roomType')}
-        >
-          <option value="Single">Single</option>
-          <option value="Double">Double</option>
-          <option value="Suite">Suite</option>
-        </select>
-      </Field>
-
-      {/* Meal Type (Room Only on top) */}
-      <Field label="Meal Type">
-        <select
-          className="brand-input w-full"
-          value={hotel.mealType || 'Room Only'}
-          onChange={set('mealType')}
-        >
-          <option value="Room Only">Room Only</option>
-          <option value="Breakfast">Breakfast</option>
-          <option value="Breakfast & Dinner">Breakfast & Dinner</option>
-          <option value="Breakfast, Lunch, Dinner">Breakfast, Lunch, Dinner</option>
-        </select>
-      </Field>
-
-      <Field label="Specific Hotel (optional)">
-        <input
-          className="brand-input w-full"
-          value={hotel.specificHotel}
-          onChange={set('specificHotel')}
-        />
-      </Field>
-
-      <Field label="Notes">
-        <textarea
-          className="brand-input w-full"
-          value={hotel.notes}
-          onChange={set('notes')}
-        />
-      </Field>
-    </div>
+    </>
   );
 }
+
