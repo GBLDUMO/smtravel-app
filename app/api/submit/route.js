@@ -5,11 +5,12 @@ import * as React from "react";
 import { Resend } from "resend";
 import TravelBookingEmail from "../../../emails/TravelBookingEmail";
 
+// --- Resend setup (env vars)
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM_EMAIL = process.env.SENDER_EMAIL;        // e.g. info@smtravel.co.za (verified)
-const BACKOFFICE = process.env.BACKOFFICE_EMAIL;    // optional BCC
+const FROM_EMAIL = process.env.SENDER_EMAIL;     // e.g. info@smtravel.co.za (must be verified in Resend)
+const BACKOFFICE = process.env.BACKOFFICE_EMAIL; // optional BCC
 
-// helpers
+// --- Helpers
 const isBlank = (v) =>
   v === undefined ||
   v === null ||
@@ -23,12 +24,12 @@ export async function POST(req) {
   try {
     const body = await req.json();
 
-    // Traveller
-    const fullName = body.contact?.fullName;
+    // ===== Traveller =====
+    const fullName  = body.contact?.fullName;
     const userEmail = body.contact?.email;
     const phone     = body.contact?.phone;
 
-    // Trip (mostly comes from Hotel section today)
+    // ===== Trip (mainly from Hotel) =====
     const destCity   = body.hotel?.destCity;
     const checkIn    = body.hotel?.checkIn;
     const checkOut   = body.hotel?.checkOut;
@@ -36,34 +37,49 @@ export async function POST(req) {
     const adults     = body.hotel?.adults;
     const bookingRef = body.hotel?.bookingRef || body.bookingRef;
 
-    // Hotel (trigger = mealType)
+    // ===== Hotel (trigger = mealType) =====
     const hotelCategory = body.hotel?.hotelCategory;
     const roomType      = body.hotel?.roomType;
     const mealType      = body.hotel?.mealType;
+    const rooms         = body.hotel?.rooms; // optional
 
-    // Flights (trigger = to)
+    // ===== Flights (trigger = base `to` or any extra segments) =====
     const from        = body.flights?.from;
     const to          = body.flights?.to;
     const departDate  = body.flights?.departDate;
     const returnDate  = body.flights?.returnDate;
+    const tripType    = body.flights?.tripType;
+    const segmentsRaw = Array.isArray(body.flights?.segments) ? body.flights.segments : [];
 
-    // Car (triggered by vehicleType in this API)
-    const vehicleType   = body.car?.carType;
+    // Keep only segments that have at least a from/to/date/tripType
+    const segments = segmentsRaw
+      .map(s => ({
+        from: s?.from ?? "",
+        to: s?.to ?? "",
+        departDate: s?.departDate ?? "",
+        tripType: s?.tripType ?? "",
+        returnDate: s?.returnDate ?? "",
+      }))
+      .filter(s => !!(s.from || s.to || s.departDate || s.tripType));
+
+    // ===== Car Hire (trigger = carType ONLY) =====
+    const vehicleType   = body.car?.carType;        // the trigger
     const dropOffDate   = body.car?.carReturnDate;
     const carPickup     = body.car?.carPickup;
     const carReturn     = body.car?.carReturn;
     const carPickupDate = body.car?.carPickupDate;
+    const carNotes      = body.car?.carNotes;       // defined to avoid ReferenceError
 
-    // Airport Transfer (robust mapping + include if any transfer fields exist)
-    // Accept either tFrom/tTo/tDate/tType OR from/to/date/transferType
-    const tFrom = body.transfer?.tFrom ?? body.transfer?.from ?? "";
-    const tTo   = body.transfer?.tTo   ?? body.transfer?.to   ?? "";
-    const tDate = body.transfer?.tDate ?? body.transfer?.date ?? "";
-    const tType = body.transfer?.tType ?? body.transfer?.transferType ?? "";
+    // ===== Airport Transfer (trigger = at least one field) =====
+    const tFrom = body.transfer?.tFrom;
+    const tTo   = body.transfer?.tTo;
+    const tDate = body.transfer?.tDate;
+    const tType = body.transfer?.tType;
 
+    // ===== Global Notes =====
     const notes = body.hotel?.notes ?? body.notes;
 
-    // guardrails
+    // --- Guardrails
     if (isBlank(userEmail)) {
       return Response.json({ ok: false, error: "Missing recipient email" }, { status: 400 });
     }
@@ -71,10 +87,17 @@ export async function POST(req) {
       return Response.json({ ok: false, error: "Missing SENDER_EMAIL env var" }, { status: 500 });
     }
 
-    // Build props with only completed sections (by triggers)
+    // --- Decide which sections to include
+    const hasHotel    = !isBlank(mealType);
+    const hasFlights  = !!(to || segments.length > 0);
+    // IMPORTANT: Car section included ONLY if carType/vehicleType is selected
+    const hasCar      = !!vehicleType;
+    const hasTransfer = !!(tFrom || tTo || tDate || tType);
+
+    // --- Build props for the email component (only what’s present)
     const emailProps = {};
 
-    // Traveller & Trip (show if present)
+    // Traveller & Trip
     addIf(emailProps, "fullName", fullName);
     addIf(emailProps, "email", userEmail);
     addIf(emailProps, "phone", phone);
@@ -85,41 +108,49 @@ export async function POST(req) {
     addIf(emailProps, "nights", nights);
     addIf(emailProps, "adults", adults);
     addIf(emailProps, "bookingRef", bookingRef);
+    addIf(emailProps, "rooms", rooms);
 
-    // Hotel: include only if trigger present (mealType)
-    if (!isBlank(mealType)) {
+    // Hotel (only when "completed" by mealType)
+    if (hasHotel) {
       addIf(emailProps, "hotelCategory", hotelCategory);
       addIf(emailProps, "roomType", roomType);
-      addIf(emailProps, "mealType", mealType);
+      addIf(emailProps, "mealType", mealType); // trigger
     }
 
-    // Flights: include only if trigger present (to)
-    if (!isBlank(to)) {
+    // Flights (base leg + optional segments)
+    if (hasFlights) {
       addIf(emailProps, "from", from);
       addIf(emailProps, "to", to);
       addIf(emailProps, "departDate", departDate);
       addIf(emailProps, "returnDate", returnDate);
+      addIf(emailProps, "tripType", tripType);
+      if (segments.length > 0) {
+        emailProps.segments = segments;
+      }
     }
 
-    // Car: include only if trigger present (vehicleType)
-    if (!isBlank(vehicleType)) {
-      addIf(emailProps, "vehicleType", vehicleType);
+    // Car (include ONLY if user selected Car Type)
+    if (hasCar) {
+      addIf(emailProps, "vehicleType", vehicleType);    // trigger present
       addIf(emailProps, "dropOffDate", dropOffDate);
       addIf(emailProps, "carPickup", carPickup);
       addIf(emailProps, "carReturn", carReturn);
       addIf(emailProps, "carPickupDate", carPickupDate);
+      addIf(emailProps, "carNotes", carNotes);
     }
 
-    // Airport Transfer: include if ANY transfer field is present (tType OR tFrom/tTo/tDate)
-    if (tType || tFrom || tTo || tDate) {
+    // Airport Transfer (if any field provided)
+    if (hasTransfer) {
       addIf(emailProps, "tFrom", tFrom);
       addIf(emailProps, "tTo", tTo);
       addIf(emailProps, "tDate", tDate);
       addIf(emailProps, "tType", tType);
     }
 
+    // Global notes
     addIf(emailProps, "notes", notes);
 
+    // --- Send email via Resend
     const send = await resend.emails.send({
       from: FROM_EMAIL,
       to: userEmail,
@@ -129,9 +160,11 @@ export async function POST(req) {
       react: <TravelBookingEmail {...emailProps} />,
     });
 
-    return Response.json(
-      { ok: !!send.data?.id, id: send.data?.id ?? null, error: send.error ?? null }
-    );
+    return Response.json({
+      ok: !!send.data?.id,
+      id: send.data?.id ?? null,
+      error: send.error ?? null,
+    });
   } catch (e) {
     console.error("SEND ERROR:", e);
     return Response.json({ ok: false, caught: String(e) }, { status: 500 });

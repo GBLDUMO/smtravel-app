@@ -44,16 +44,10 @@ function initialFlights() {
   };
 }
 
-
 function initialCar() {
-  return {
-    carPickup: '',
-    carReturn: '',
-    carPickupDate: '',
-    carReturnDate: '',
-    carType: '', // blank (TRIGGER for Car)
-  };
+  return { carPickup: '', carReturn: '', carPickupDate: '', carReturnDate: '', carType: '', carNotes: '' };
 }
+
 function initialTransfer() {
   // TRIGGER = tType
   return { tFrom: '', tTo: '', tDate: '', tType: '' };
@@ -220,6 +214,9 @@ export default function Page() {
     const ok = root && getComputedStyle(root).getPropertyValue('--brand-navy').trim() === '#0b3c91';
     console.table([{ test: 'CSS var --brand-navy set', pass: !!ok }]);
   }, []);
+
+  // --- NEW: helper to know if we're on the last step
+  const isLast = tab === SECTIONS.length - 1;
 
   return (
     <main className="min-h-screen" style={{ ...themeVars, background: gradientBg }}>
@@ -408,17 +405,19 @@ export default function Page() {
                 </button>
 
                 <div className="ml-auto flex gap-2">
-                  <button onClick={completeNow} disabled={sending} className="brand-btn-secondary">
+                  {/* Complete: blue on last step; secondary elsewhere */}
+                  <button
+                    onClick={completeNow}
+                    disabled={sending}
+                    className={isLast ? 'brand-btn-primary' : 'brand-btn-secondary'}
+                  >
                     {sending ? 'Working…' : 'Complete'}
                   </button>
 
-                  {tab < SECTIONS.length - 1 ? (
+                  {/* Next only when not on last step */}
+                  {!isLast && (
                     <button onClick={goNext} className="brand-btn-primary">
                       Next: {SECTIONS[findNextIndex(tab)]}
-                    </button>
-                  ) : (
-                    <button onClick={submitFull} disabled={sending} className="brand-btn-primary">
-                      {sending ? 'Sending…' : 'Submit request'}
                     </button>
                   )}
                 </div>

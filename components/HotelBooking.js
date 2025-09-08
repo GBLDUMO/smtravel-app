@@ -36,16 +36,15 @@ export default function HotelBooking({ hotel, setHotel }) {
         {/* Make Destination span both columns so the next row lines up */}
         <div className="md:col-span-2">
           <Field label="Destination city">
-              <input
-             className="brand-input"
-             value={c.destCity || ''}
-             onChange={set('destCity')}
-               placeholder="e.g. Cape Town"
-             maxLength={25}   // user can’t type more than 25 characters
-             size={25}        // box width ~ 25 characters
-                  />
-            </Field>
-
+            <input
+              className="brand-input"
+              value={c.destCity || ''}
+              onChange={set('destCity')}
+              placeholder="e.g. Cape Town"
+              maxLength={25}   // user can’t type more than 25 characters
+              size={25}        // box width ~ 25 characters
+            />
+          </Field>
         </div>
 
         {/* Row: Check-in | Check-out */}
@@ -69,15 +68,17 @@ export default function HotelBooking({ hotel, setHotel }) {
 
         {/* Row: No of Traveler(s) | No of Rooms */}
         <Field label="No of Traveler(s)">
-          <input
-            type="number"
-            min={1}
+          <select
             className="brand-input w-full"
             value={c.adults ?? ''}
             onChange={set('adults')}
-            placeholder="e.g. 2"
             required
-          />
+          >
+            <option value="">— Select —</option>
+            {Array.from({ length: 9 }, (_, i) => (
+              <option key={i} value={i}>{i}</option>
+            ))}
+          </select>
         </Field>
 
         <Field label="No of Rooms">
@@ -122,8 +123,8 @@ export default function HotelBooking({ hotel, setHotel }) {
           </select>
         </Field>
 
-        {/* Meal type (trigger for hotel section inclusion in email) */}
-        <Field label="Meal type (required to include Hotel in email)">
+        {/* Meal type (clean label + limited options) */}
+        <Field label="Meal type">
           <select
             className="brand-input w-full"
             value={c.mealType || ''}
@@ -133,9 +134,8 @@ export default function HotelBooking({ hotel, setHotel }) {
             <option value="">— Select —</option>
             <option>Room Only</option>
             <option>Breakfast</option>
-            <option>Half Board</option>
-            <option>Full Board</option>
-            <option>All Inclusive</option>
+            <option>Breakfast & Dinner</option>
+            <option>Breakfast, Lunch & Dinner</option>
           </select>
         </Field>
 
@@ -180,4 +180,3 @@ export default function HotelBooking({ hotel, setHotel }) {
     </>
   );
 }
-

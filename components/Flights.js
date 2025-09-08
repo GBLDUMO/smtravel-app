@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Field from '@/components/Field';
 
 /**
@@ -11,6 +11,97 @@ import Field from '@/components/Field';
  *   - Each extra leg has from/to/departDate/tripType[/returnDate] and can be removed.
  *   - For every leg (base and segments), Trip type is mandatory.
  */
+
+// Major ZA cities + primary airport codes (ALPHABETICAL)
+const ZA_AIRPORTS = [
+  { label: 'Bloemfontein (BFN)', value: 'Bloemfontein (BFN)' },
+  { label: 'Cape Town (CPT)', value: 'Cape Town (CPT)' },
+  { label: 'Durban – King Shaka (DUR)', value: 'Durban (DUR)' },
+  { label: 'East London (ELS)', value: 'East London (ELS)' },
+  { label: 'George (GRJ)', value: 'George (GRJ)' },
+  { label: 'Gqeberha / Port Elizabeth (PLZ)', value: 'Gqeberha (PLZ)' },
+  { label: 'Hoedspruit – Eastgate (HDS)', value: 'Hoedspruit (HDS)' },
+  { label: 'Johannesburg – Lanseria (HLA)', value: 'Johannesburg – Lanseria (HLA)' },
+  { label: 'Johannesburg – OR Tambo (JNB)', value: 'Johannesburg (JNB)' },
+  { label: 'Kimberley (KIM)', value: 'Kimberley (KIM)' },
+  { label: 'Mbombela – Kruger Mpumalanga (MQP)', value: 'Mbombela (MQP)' },
+  { label: 'Pietermaritzburg (PZB)', value: 'Pietermaritzburg (PZB)' },
+  { label: 'Pilanesberg / Sun City (NTY)', value: 'Pilanesberg (NTY)' },
+  { label: 'Polokwane (PTG)', value: 'Polokwane (PTG)' },
+  { label: 'Richards Bay (RCB)', value: 'Richards Bay (RCB)' },
+  { label: 'Skukuza (SZK)', value: 'Skukuza (SZK)' },
+  { label: 'Upington (UTN)', value: 'Upington (UTN)' },
+];
+
+// Utility: is the current value one of our known options?
+const isKnownAirport = (val) => ZA_AIRPORTS.some((a) => a.value === (val || ''));
+
+// A reusable field that is a dropdown by default, but can switch to a free-text input.
+function EditableAirportField({
+  value,
+  onChange,
+  placeholderList = '— Select —',
+  placeholderInput = 'e.g. Nairobi or NBO',
+}) {
+  const known = useMemo(() => isKnownAirport(value), [value]);
+  const [useCustom, setUseCustom] = useState(() => (value ? !known : false));
+
+  // If parent changes value externally, keep UI in sync
+  useEffect(() => {
+    const nowKnown = isKnownAirport(value);
+    setUseCustom(value ? !nowKnown : useCustom && false); // if cleared externally, go back to list
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  if (useCustom) {
+    return (
+      <div className="flex items-center gap-2">
+        <input
+          className="brand-input w-full"
+          value={value || ''}
+          onChange={(e) => onChange({ target: { value: e.target.value } })}
+          placeholder={placeholderInput}
+          required
+        />
+        <button
+          type="button"
+          className="brand-btn-secondary whitespace-nowrap"
+          onClick={() => {
+            onChange({ target: { value: '' } });
+            setUseCustom(false);
+          }}
+          title="Switch back to list"
+        >
+          Use list
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <select
+      className="brand-input w-full"
+      value={known ? value : ''}    // if not known, show placeholder
+      onChange={(e) => {
+        if (e.target.value === '__other__') {
+          setUseCustom(true);
+          onChange({ target: { value: '' } });
+        } else {
+          onChange(e);
+        }
+      }}
+      required
+    >
+      <option value="">{placeholderList}</option>
+      {ZA_AIRPORTS.map((a) => (
+        <option key={a.value} value={a.value}>
+          {a.label}
+        </option>
+      ))}
+      <option value="__other__">Other (type manually)</option>
+    </select>
+  );
+}
 
 export default function Flights({ flights, setFlights }) {
   // Safe defaults
@@ -98,20 +189,20 @@ export default function Flights({ flights, setFlights }) {
       {/* Base leg */}
       <div className="grid md:grid-cols-2 gap-4">
         <Field label="From (city or airport)">
-          <input
-            className="brand-input w-full"
-            value={f.from || ''}
+          <EditableAirportField
+            value={f.from}
             onChange={setBase('from')}
-            placeholder="e.g. Dubai or DXB"
+            placeholderList="— Select origin —"
+            placeholderInput="e.g. Nairobi or NBO"
           />
         </Field>
 
         <Field label="To (city or airport)">
-          <input
-            className="brand-input w-full"
-            value={f.to || ''}
+          <EditableAirportField
+            value={f.to}
             onChange={setBase('to')}
-            placeholder="e.g. Cape Town or CPT"
+            placeholderList="— Select destination —"
+            placeholderInput="e.g. London or LHR"
           />
         </Field>
 
@@ -179,20 +270,20 @@ export default function Flights({ flights, setFlights }) {
               style={{ borderColor: 'var(--brand-navy-22)' }}
             >
               <Field label={`Leg ${i + 2} — From (city or airport)`}>
-                <input
-                  className="brand-input w-full"
+                <EditableAirportField
                   value={seg.from || ''}
                   onChange={setSeg(i, 'from')}
-                  placeholder="e.g. Johannesburg or JNB"
+                  placeholderList="— Select origin —"
+                  placeholderInput="e.g. Livingstone or LVI"
                 />
               </Field>
 
               <Field label="To (city or airport)">
-                <input
-                  className="brand-input w-full"
+                <EditableAirportField
                   value={seg.to || ''}
                   onChange={setSeg(i, 'to')}
-                  placeholder="e.g. Nairobi or NBO"
+                  placeholderList="— Select destination —"
+                  placeholderInput="e.g. Victoria Falls or VFA"
                 />
               </Field>
 
@@ -205,7 +296,7 @@ export default function Flights({ flights, setFlights }) {
                 />
               </Field>
 
-              {/* NEW: Trip type per segment (mandatory) */}
+              {/* Trip type per segment (mandatory) */}
               <Field label="Trip type">
                 <select
                   className="brand-input w-full"
