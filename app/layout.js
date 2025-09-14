@@ -11,7 +11,15 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata = { title: 'Solid Matter Travel', description: 'Booking App' };
+export const metadata = { 
+  title: "Solid Matter Travel", 
+  description: "Booking App",
+  icons: {
+    icon: "/favicon.ico",         // main favicon (in /public)
+    shortcut: "/favicon.ico",     // for older browsers
+    apple: "/favicon.ico",        // for iOS Safari
+  },
+};
 
 export default function RootLayout({ children }) {
   return (
@@ -20,4 +28,5 @@ export default function RootLayout({ children }) {
     </html>
   );
 }
+
 
