@@ -35,7 +35,7 @@ export default function HotelBooking({ hotel, setHotel }) {
       <div className="grid md:grid-cols-2 gap-4">
         {/* Make Destination span both columns so the next row lines up */}
         <div className="md:col-span-2">
-          <Field label="Destination city">
+          <Field label="Traveling To:">
             <input
               className="brand-input"
               value={c.destCity || ''}
