@@ -5,7 +5,7 @@ import * as React from "react";
 import { Resend } from "resend";
 import TravelBookingEmail from "../../../emails/TravelBookingEmail";
 
-// NEW: simple file-based counter for quote refs
+// ---------------- Counter for Quote Refs ----------------
 import { promises as fs } from "fs";
 const COUNTER_FILE = "/tmp/smt_quote_counter.txt";
 const COUNTER_START = 10100; // first number => SMT-Q10100
@@ -18,24 +18,58 @@ async function getNextQuoteRef() {
       n = parseInt(raw.trim(), 10);
       if (!Number.isFinite(n)) n = COUNTER_START;
     } catch {
-      n = COUNTER_START; // if file missing on cold start
+      n = COUNTER_START; // first cold start
     }
     const next = n + 1;
     await fs.writeFile(COUNTER_FILE, String(next), "utf8");
     return `SMT-Q${n}`;
   } catch {
-    // Fallback: time-based (still unique-ish) if /tmp fails for any reason
+    // Fallback if /tmp fails
     const fallback = Date.now().toString().slice(-6);
     return `SMT-Q${fallback}`;
   }
 }
 
-// --- Resend setup (env vars)
+// ---------------- Email (Resend) ----------------
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM_EMAIL = process.env.SENDER_EMAIL;     // e.g. info@smtravel.co.za (must be verified in Resend)
-const BACKOFFICE = process.env.BACKOFFICE_EMAIL; // optional BCC
+const FROM_EMAIL = process.env.SENDER_EMAIL;      // e.g. info@smtravel.co.za (verified on Resend)
+const BACKOFFICE = process.env.BACKOFFICE_EMAIL;  // optional BCC
 
-// --- Helpers
+// ---------------- Google Sheet webhook ----------------
+const GSHEET_URL = process.env.GSHEET_WEBHOOK_URL;       // your Apps Script /exec URL
+const GSHEET_SECRET = process.env.GSHEET_WEBHOOK_SECRET; // must match SECRET in Apps Script
+
+async function sendToSheet(booking) {
+  if (!GSHEET_URL || !GSHEET_SECRET) {
+    console.log("Sheet skipped: missing GSHEET env vars", {
+      hasUrl: !!GSHEET_URL,
+      hasSecret: !!GSHEET_SECRET,
+    });
+    return { ok: false, error: "Missing GSHEET env vars" };
+  }
+
+  try {
+    console.log("Sending to Sheet...", {
+      urlHost: (() => { try { return new URL(GSHEET_URL).host; } catch { return "bad-url"; } })(),
+      bookingId: booking.bookingId,
+    });
+
+    const res = await fetch(GSHEET_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ secret: GSHEET_SECRET, ...booking }),
+    });
+
+    const text = await res.text(); // GAS often returns text/plain
+    console.log("Sheet response:", res.status, text);
+    return { status: res.status, body: text };
+  } catch (err) {
+    console.error("Sheet push failed:", err);
+    return { ok: false, error: String(err) };
+  }
+}
+
+// ---------------- Helpers ----------------
 const isBlank = (v) =>
   v === undefined ||
   v === null ||
@@ -45,6 +79,7 @@ const addIf = (obj, key, value) => {
   if (!isBlank(value)) obj[key] = typeof value === "string" ? value.trim() : value;
 };
 
+// ---------------- Handler ----------------
 export async function POST(req) {
   try {
     const body = await req.json();
@@ -54,7 +89,7 @@ export async function POST(req) {
     const userEmail = body.contact?.email;
     const phone     = body.contact?.phone;
 
-    // ===== Trip (mainly from Hotel) =====
+    // ===== Trip (Hotel fields) =====
     const destCity   = body.hotel?.destCity;
     const checkIn    = body.hotel?.checkIn;
     const checkOut   = body.hotel?.checkOut;
@@ -65,18 +100,17 @@ export async function POST(req) {
     // ===== Hotel (trigger = mealType) =====
     const hotelCategory = body.hotel?.hotelCategory;
     const roomType      = body.hotel?.roomType;
-    const mealType      = body.hotel?.mealType;
-    const rooms         = body.hotel?.rooms; // optional
+    const mealType      = body.hotel?.mealType; // presence means “hotel section completed”
+    const rooms         = body.hotel?.rooms;
+    const hotelBooked   = body.hotel?.hotelName || body.hotel?.selectedHotel || "";
 
-    // ===== Flights (trigger = base `to` or any extra segments) =====
+    // ===== Flights =====
     const from        = body.flights?.from;
     const to          = body.flights?.to;
     const departDate  = body.flights?.departDate;
     const returnDate  = body.flights?.returnDate;
     const tripType    = body.flights?.tripType;
     const segmentsRaw = Array.isArray(body.flights?.segments) ? body.flights.segments : [];
-
-    // Keep only segments that have at least a from/to/date/tripType
     const segments = segmentsRaw
       .map(s => ({
         from: s?.from ?? "",
@@ -87,24 +121,24 @@ export async function POST(req) {
       }))
       .filter(s => !!(s.from || s.to || s.departDate || s.tripType));
 
-    // ===== Car Hire (trigger = carType ONLY) =====
-    const vehicleType   = body.car?.carType;        // the trigger
+    // ===== Car =====
+    const vehicleType   = body.car?.carType;
     const dropOffDate   = body.car?.carReturnDate;
     const carPickup     = body.car?.carPickup;
     const carReturn     = body.car?.carReturn;
     const carPickupDate = body.car?.carPickupDate;
-    const carNotes      = body.car?.carNotes;       // defined to avoid ReferenceError
+    const carNotes      = body.car?.carNotes;
 
-    // ===== Airport Transfer (trigger = at least one field) =====
+    // ===== Transfer =====
     const tFrom = body.transfer?.tFrom;
     const tTo   = body.transfer?.tTo;
     const tDate = body.transfer?.tDate;
     const tType = body.transfer?.tType;
 
-    // ===== Global Notes =====
+    // ===== Notes =====
     const notes = body.hotel?.notes ?? body.notes;
 
-    // --- Guardrails
+    // Guardrails
     if (isBlank(userEmail)) {
       return Response.json({ ok: false, error: "Missing recipient email" }, { status: 400 });
     }
@@ -112,17 +146,14 @@ export async function POST(req) {
       return Response.json({ ok: false, error: "Missing SENDER_EMAIL env var" }, { status: 500 });
     }
 
-    // --- Decide which sections to include
+    // Decide which sections to include
     const hasHotel    = !isBlank(mealType);
     const hasFlights  = !!(to || segments.length > 0);
-    // IMPORTANT: Car section included ONLY if carType/vehicleType is selected
-    const hasCar      = !!vehicleType;
+    const hasCar      = !!vehicleType; // only include if selected
     const hasTransfer = !!(tFrom || tTo || tDate || tType);
 
-    // --- Build props for the email component (only what’s present)
+    // Build props for the email component
     const emailProps = {};
-
-    // Traveller & Trip
     addIf(emailProps, "fullName", fullName);
     addIf(emailProps, "email", userEmail);
     addIf(emailProps, "phone", phone);
@@ -135,28 +166,23 @@ export async function POST(req) {
     addIf(emailProps, "bookingRef", bookingRef);
     addIf(emailProps, "rooms", rooms);
 
-    // Hotel (only when "completed" by mealType)
     if (hasHotel) {
       addIf(emailProps, "hotelCategory", hotelCategory);
       addIf(emailProps, "roomType", roomType);
-      addIf(emailProps, "mealType", mealType); // trigger
+      addIf(emailProps, "mealType", mealType);
     }
 
-    // Flights (base leg + optional segments)
     if (hasFlights) {
       addIf(emailProps, "from", from);
       addIf(emailProps, "to", to);
       addIf(emailProps, "departDate", departDate);
       addIf(emailProps, "returnDate", returnDate);
       addIf(emailProps, "tripType", tripType);
-      if (segments.length > 0) {
-        emailProps.segments = segments;
-      }
+      if (segments.length > 0) emailProps.segments = segments;
     }
 
-    // Car (include ONLY if user selected Car Type)
     if (hasCar) {
-      addIf(emailProps, "vehicleType", vehicleType);    // trigger present
+      addIf(emailProps, "vehicleType", vehicleType);
       addIf(emailProps, "dropOffDate", dropOffDate);
       addIf(emailProps, "carPickup", carPickup);
       addIf(emailProps, "carReturn", carReturn);
@@ -164,7 +190,6 @@ export async function POST(req) {
       addIf(emailProps, "carNotes", carNotes);
     }
 
-    // Airport Transfer (if any field provided)
     if (hasTransfer) {
       addIf(emailProps, "tFrom", tFrom);
       addIf(emailProps, "tTo", tTo);
@@ -172,14 +197,13 @@ export async function POST(req) {
       addIf(emailProps, "tType", tType);
     }
 
-    // Global notes
     addIf(emailProps, "notes", notes);
 
-    // NEW: Generate & attach Quote Reference
+    // Quote ref
     const quoteRef = await getNextQuoteRef();
     addIf(emailProps, "quoteRef", quoteRef);
 
-    // --- Send email via Resend
+    // Send email
     const send = await resend.emails.send({
       from: FROM_EMAIL,
       to: userEmail,
@@ -189,14 +213,34 @@ export async function POST(req) {
       react: <TravelBookingEmail {...emailProps} />,
     });
 
+    // ---------- Push a row to Google Sheet ----------
+    // Sheet headers you showed:
+    // Timestamp, Booking ID, Service, Name, Email, Phone, Traveling To,
+    // Hotel Booked, Check In Date, Check Out Date, Guests, Notes, Source
+    await sendToSheet({
+      bookingId: quoteRef,
+      service: hasHotel ? "Hotel" : (hasFlights ? "Flight" : (hasCar ? "Car" : (hasTransfer ? "Transfer" : "General"))),
+      name: fullName || "",
+      email: userEmail || "",
+      phone: phone || "",
+      travelingTo: destCity || "",
+      hotelBooked: hotelBooked || "",   // GAS will ignore if not used
+      checkIn: checkIn || "",
+      checkOut: checkOut || "",
+      guests: adults || "",
+      notes: notes || "",
+      source: "SMT-App",
+    });
+    // -------------------------------------------------
+
     return Response.json({
       ok: !!send.data?.id,
       id: send.data?.id ?? null,
       error: send.error ?? null,
-      quoteRef, // echo back for logs/UI if needed
+      quoteRef,
     });
   } catch (e) {
-    console.error("SEND ERROR:", e);
+    console.error("SEND/GSHEET ERROR:", e);
     return Response.json({ ok: false, caught: String(e) }, { status: 500 });
   }
 }
