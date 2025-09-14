@@ -8,7 +8,7 @@ import TravelBookingEmail from "../../../emails/TravelBookingEmail";
 // ---------------- Counter for Quote Refs ----------------
 import { promises as fs } from "fs";
 const COUNTER_FILE = "/tmp/smt_quote_counter.txt";
-const COUNTER_START = 10100; // first number => SMT-Q10100
+const COUNTER_START = 1001; // first number => SMT-QU1001
 
 async function getNextQuoteRef() {
   try {
@@ -18,17 +18,18 @@ async function getNextQuoteRef() {
       n = parseInt(raw.trim(), 10);
       if (!Number.isFinite(n)) n = COUNTER_START;
     } catch {
-      n = COUNTER_START; // first cold start
+      n = COUNTER_START; // if file missing on cold start
     }
     const next = n + 1;
     await fs.writeFile(COUNTER_FILE, String(next), "utf8");
-    return `SMT-Q${n}`;
+    return `SMT-QU${n}`;
   } catch {
-    // Fallback if /tmp fails
+    // Fallback: time-based (still unique-ish) if /tmp fails
     const fallback = Date.now().toString().slice(-6);
-    return `SMT-Q${fallback}`;
+    return `SMT-QU${fallback}`;
   }
 }
+
 
 // ---------------- Email (Resend) ----------------
 const resend = new Resend(process.env.RESEND_API_KEY);
