@@ -149,7 +149,7 @@ export async function POST(req) {
     // Decide which sections to include
     const hasHotel    = !isBlank(mealType);
     const hasFlights  = !!(to || segments.length > 0);
-    const hasCar      = !!vehicleType; // only include if selected
+    const hasCar      = !!(vehicleType);
     const hasTransfer = !!(tFrom || tTo || tDate || tType);
 
     // Build props for the email component
@@ -214,9 +214,6 @@ export async function POST(req) {
     });
 
     // ---------- Push a row to Google Sheet ----------
-    // Sheet headers you showed:
-    // Timestamp, Booking ID, Service, Name, Email, Phone, Traveling To,
-    // Hotel Booked, Check In Date, Check Out Date, Guests, Notes, Source
     await sendToSheet({
       bookingId: quoteRef,
       service: hasHotel ? "Hotel" : (hasFlights ? "Flight" : (hasCar ? "Car" : (hasTransfer ? "Transfer" : "General"))),
@@ -224,7 +221,7 @@ export async function POST(req) {
       email: userEmail || "",
       phone: phone || "",
       travelingTo: destCity || "",
-      hotelBooked: hotelBooked || "",   // GAS will ignore if not used
+      hotelBooked: hotelBooked || "",
       checkIn: checkIn || "",
       checkOut: checkOut || "",
       guests: adults || "",
