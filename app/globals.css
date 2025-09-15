@@ -19,8 +19,16 @@
   }
 }
 
+/* ✅ Ensure background covers the full viewport */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* ✅ Transparent so the background image shows */
 body {
-  background: var(--background);
+  background: transparent;
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
