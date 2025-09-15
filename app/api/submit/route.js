@@ -5,40 +5,55 @@ import * as React from "react";
 import { Resend } from "resend";
 import TravelBookingEmail from "../../../emails/TravelBookingEmail";
 
-// ---------------- Counter for Quote Refs ----------------
-import { promises as fs } from "fs";
-const COUNTER_FILE = "/tmp/smt_quote_counter.txt";
-const COUNTER_START = 1001; // first number => SMT-QU1001
-
-async function getNextQuoteRef() {
-  try {
-    let n;
-    try {
-      const raw = await fs.readFile(COUNTER_FILE, "utf8");
-      n = parseInt(raw.trim(), 10);
-      if (!Number.isFinite(n)) n = COUNTER_START;
-    } catch {
-      n = COUNTER_START; // if file missing on cold start
-    }
-    const next = n + 1;
-    await fs.writeFile(COUNTER_FILE, String(next), "utf8");
-    return `SMT-QU${n}`;
-  } catch {
-    // Fallback: time-based (still unique-ish) if /tmp fails
-    const fallback = Date.now().toString().slice(-6);
-    return `SMT-QU${fallback}`;
-  }
-}
-
-
 // ---------------- Email (Resend) ----------------
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.SENDER_EMAIL;      // e.g. info@smtravel.co.za (verified on Resend)
 const BACKOFFICE = process.env.BACKOFFICE_EMAIL;  // optional BCC
 
-// ---------------- Google Sheet webhook ----------------
-const GSHEET_URL = process.env.GSHEET_WEBHOOK_URL;       // your Apps Script /exec URL
+// ---------------- Google Sheet webhook (Apps Script) ----------------
+const GSHEET_URL = process.env.GSHEET_WEBHOOK_URL;       // prefer the script.googleusercontent.com URL
 const GSHEET_SECRET = process.env.GSHEET_WEBHOOK_SECRET; // must match SECRET in Apps Script
+
+// === Atomic Booking ID from Apps Script, with a local fallback ===
+async function getNextBookingId() {
+  const base = GSHEET_URL;
+  const secret = GSHEET_SECRET;
+
+  if (!base || !secret) {
+    console.warn("GAS env missing; using local fallback ID.");
+    const n = Date.now().toString().slice(-6);
+    return `SMT-QU${n}`;
+  }
+
+  // Put action=nextId in the query so GAS reads e.parameter.action
+  const u = new URL(base);
+  u.searchParams.set("action", "nextId");
+
+  try {
+    const res = await fetch(u.toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ secret }), // keep body simple; action is in query
+      redirect: "follow",
+    });
+
+    const text = await res.text(); // GAS often returns text/plain
+    let data = null;
+    try { data = JSON.parse(text); } catch {}
+
+    if (data && data.bookingId) {
+      return data.bookingId; // e.g., "SMT-QU1001"
+    }
+
+    console.error("nextId raw response:", res.status, text?.slice(0, 300));
+    throw new Error("missing bookingId from GAS");
+  } catch (e) {
+    console.error("GAS nextId failed:", String(e));
+    // Fallback so emails still work while you tweak the script
+    const n = Date.now().toString().slice(-6);
+    return `SMT-QU${n}`;
+  }
+}
 
 async function sendToSheet(booking) {
   if (!GSHEET_URL || !GSHEET_SECRET) {
@@ -50,11 +65,6 @@ async function sendToSheet(booking) {
   }
 
   try {
-    console.log("Sending to Sheet...", {
-      urlHost: (() => { try { return new URL(GSHEET_URL).host; } catch { return "bad-url"; } })(),
-      bookingId: booking.bookingId,
-    });
-
     const res = await fetch(GSHEET_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -62,7 +72,7 @@ async function sendToSheet(booking) {
     });
 
     const text = await res.text(); // GAS often returns text/plain
-    console.log("Sheet response:", res.status, text);
+    console.log("Sheet response:", res.status, text?.slice(0, 200));
     return { status: res.status, body: text };
   } catch (err) {
     console.error("Sheet push failed:", err);
@@ -111,7 +121,7 @@ export async function POST(req) {
     const departDate  = body.flights?.departDate;
     const returnDate  = body.flights?.returnDate;
     const tripType    = body.flights?.tripType;
-    const segmentsRaw = Array.isArray(body.flights?.segments) ? body.flights.segments : [];
+    const segmentsRaw = Array.isArray(body.flights?.segments) ? body.flights?.segments : [];
     const segments = segmentsRaw
       .map(s => ({
         from: s?.from ?? "",
@@ -152,6 +162,10 @@ export async function POST(req) {
     const hasFlights  = !!(to || segments.length > 0);
     const hasCar      = !!(vehicleType);
     const hasTransfer = !!(tFrom || tTo || tDate || tType);
+
+    // === Single source of truth Booking ID ===
+    const bookingId = await getNextBookingId();
+    const quoteRef  = bookingId; // keep old prop name for compatibility
 
     // Build props for the email component
     const emailProps = {};
@@ -200,9 +214,9 @@ export async function POST(req) {
 
     addIf(emailProps, "notes", notes);
 
-    // Quote ref
-    const quoteRef = await getNextQuoteRef();
+    // Add IDs for the email template
     addIf(emailProps, "quoteRef", quoteRef);
+    addIf(emailProps, "bookingId", bookingId);
 
     // Send email
     const send = await resend.emails.send({
@@ -210,13 +224,15 @@ export async function POST(req) {
       to: userEmail,
       bcc: !isBlank(BACKOFFICE) ? [BACKOFFICE] : undefined,
       reply_to: BACKOFFICE || undefined,
-      subject: `We’ve received your travel request — ${quoteRef}`,
+      subject: `We’ve received your travel request — ${bookingId}`,
       react: <TravelBookingEmail {...emailProps} />,
+      text: `Thanks${fullName ? ` ${fullName}` : ""}. Your Booking ID is ${bookingId}. We’ll be in touch shortly.`,
     });
+    console.log("RESEND RESULT", { ok: !!send.data?.id, id: send.data?.id || null, error: send.error || null });
 
     // ---------- Push a row to Google Sheet ----------
     await sendToSheet({
-      bookingId: quoteRef,
+      bookingId, // column B
       service: hasHotel ? "Hotel" : (hasFlights ? "Flight" : (hasCar ? "Car" : (hasTransfer ? "Transfer" : "General"))),
       name: fullName || "",
       email: userEmail || "",
@@ -235,7 +251,8 @@ export async function POST(req) {
       ok: !!send.data?.id,
       id: send.data?.id ?? null,
       error: send.error ?? null,
-      quoteRef,
+      bookingId,
+      quoteRef, // kept for old clients if they read this name
     });
   } catch (e) {
     console.error("SEND/GSHEET ERROR:", e);
@@ -246,4 +263,3 @@ export async function POST(req) {
 export async function GET() {
   return Response.json({ ok: true, route: "/api/submit", method: "GET" });
 }
-
