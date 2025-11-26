@@ -8,7 +8,7 @@ import TravelBookingEmail from "../../../emails/TravelBookingEmail";
 // ---------------- Email (Resend) ----------------
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.SENDER_EMAIL;      // e.g. info@smtravel.co.za (verified on Resend)
-const BACKOFFICE = process.env.BACKOFFICE_EMAIL;  // optional BCC
+const BACKOFFICE = process.env.BACKOFFICE_EMAIL;  // e.g. info@smtravel.co.za (admin copy)
 
 // ---------------- Google Sheet webhook (Apps Script) ----------------
 const GSHEET_URL = process.env.GSHEET_WEBHOOK_URL;       // prefer the script.googleusercontent.com URL
@@ -149,11 +149,15 @@ export async function POST(req) {
     // ===== Notes =====
     const notes = body.hotel?.notes ?? body.notes;
 
+    // Normalise env values
+    const fromEmail = FROM_EMAIL?.trim();
+    const backofficeEmail = BACKOFFICE?.trim();
+
     // Guardrails
     if (isBlank(userEmail)) {
       return Response.json({ ok: false, error: "Missing recipient email" }, { status: 400 });
     }
-    if (isBlank(FROM_EMAIL)) {
+    if (isBlank(fromEmail)) {
       return Response.json({ ok: false, error: "Missing SENDER_EMAIL env var" }, { status: 500 });
     }
 
@@ -218,22 +222,41 @@ export async function POST(req) {
     addIf(emailProps, "quoteRef", quoteRef);
     addIf(emailProps, "bookingId", bookingId);
 
+    // Build recipients: client + backoffice
+    const recipients = [userEmail];
+    if (!isBlank(backofficeEmail)) {
+      recipients.push(backofficeEmail);
+    }
+
     // Send email
     const send = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: userEmail,
-      bcc: !isBlank(BACKOFFICE) ? [BACKOFFICE] : undefined,
-      reply_to: BACKOFFICE || undefined,
+      from: fromEmail,                            // e.g. "Solid Matter Travel <info@smtravel.co.za>"
+      to: recipients,                             // [client, backoffice]
+      reply_to: backofficeEmail || fromEmail,     // replies go to you
       subject: `We’ve received your travel request — ${bookingId}`,
       react: <TravelBookingEmail {...emailProps} />,
       text: `Thanks${fullName ? ` ${fullName}` : ""}. Your Booking ID is ${bookingId}. We’ll be in touch shortly.`,
     });
-    console.log("RESEND RESULT", { ok: !!send.data?.id, id: send.data?.id || null, error: send.error || null });
+
+    console.log("RESEND RESULT", {
+      ok: !!send.data?.id,
+      id: send.data?.id || null,
+      error: send.error || null,
+      to: recipients,
+    });
 
     // ---------- Push a row to Google Sheet ----------
     await sendToSheet({
       bookingId, // column B
-      service: hasHotel ? "Hotel" : (hasFlights ? "Flight" : (hasCar ? "Car" : (hasTransfer ? "Transfer" : "General"))),
+      service: hasHotel
+        ? "Hotel"
+        : hasFlights
+        ? "Flight"
+        : hasCar
+        ? "Car"
+        : hasTransfer
+        ? "Transfer"
+        : "General",
       name: fullName || "",
       email: userEmail || "",
       phone: phone || "",
