@@ -7,8 +7,8 @@ import TravelBookingEmail from "../../../emails/TravelBookingEmail";
 
 // ---------------- Email (Resend) ----------------
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM_EMAIL = process.env.SENDER_EMAIL;      // e.g. info@smtravel.co.za (verified on Resend)
-const BACKOFFICE = process.env.BACKOFFICE_EMAIL;  // e.g. info@smtravel.co.za (admin copy)
+const FROM_EMAIL = process.env.SENDER_EMAIL;      // should be just: info@smtravel.co.za
+const BACKOFFICE = process.env.BACKOFFICE_EMAIL;  // e.g. admin@smtravel.co.za
 
 // ---------------- Google Sheet webhook (Apps Script) ----------------
 const GSHEET_URL = process.env.GSHEET_WEBHOOK_URL;       // prefer the script.googleusercontent.com URL
@@ -149,9 +149,11 @@ export async function POST(req) {
     // ===== Notes =====
     const notes = body.hotel?.notes ?? body.notes;
 
-    // Normalise env values
-    const fromEmail = FROM_EMAIL?.trim();
-    const backofficeEmail = BACKOFFICE?.trim();
+    // -------- Normalise env values (and strip display names if any) --------
+    const rawFrom = FROM_EMAIL || "";
+    const fromMatch = rawFrom.match(/<(.+?)>/);           // handles "Name <email@dom>"
+    const fromEmail = (fromMatch ? fromMatch[1] : rawFrom).trim();
+    const backofficeEmail = (BACKOFFICE || "").trim();
 
     // Guardrails
     if (isBlank(userEmail)) {
@@ -228,11 +230,12 @@ export async function POST(req) {
       recipients.push(backofficeEmail);
     }
 
-    // Send email
+    // ---------------- Send email ----------------
     const send = await resend.emails.send({
-      from: fromEmail,                            // e.g. "Solid Matter Travel <info@smtravel.co.za>"
-      to: recipients,                             // [client, backoffice]
-      reply_to: backofficeEmail || fromEmail,     // replies go to you
+      // IMPORTANT: display name is added here, env is pure email
+      from: `Solid Matter Travel <${fromEmail}>`,
+      to: recipients,
+      reply_to: backofficeEmail || fromEmail,
       subject: `We’ve received your travel request — ${bookingId}`,
       react: <TravelBookingEmail {...emailProps} />,
       text: `Thanks${fullName ? ` ${fullName}` : ""}. Your Booking ID is ${bookingId}. We’ll be in touch shortly.`,
