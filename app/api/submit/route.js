@@ -248,26 +248,40 @@ export async function POST(req) {
       to: recipients,
     });
 
-    // ---------- Push a row to Google Sheet ----------
+    // ---------- Push FULL booking data to Google Sheet ONLINE_QUEUE ----------
     await sendToSheet({
-      bookingId, // column B
-      service: hasHotel
-        ? "Hotel"
-        : hasFlights
-        ? "Flight"
-        : hasCar
-        ? "Car"
-        : hasTransfer
-        ? "Transfer"
-        : "General",
+      bookingId,
       name: fullName || "",
+      fullName: fullName || "",
       email: userEmail || "",
       phone: phone || "",
+      destCity: destCity || "",
       travelingTo: destCity || "",
-      hotelBooked: hotelBooked || "",
       checkIn: checkIn || "",
       checkOut: checkOut || "",
+      nights: nights || "",
+      adults: adults || "",
       guests: adults || "",
+      hotelCategory: hasHotel ? (hotelCategory || "") : "",
+      roomType: hasHotel ? (roomType || "") : "",
+      mealType: hasHotel ? (mealType || "") : "",
+      rooms: hasHotel ? (rooms || "") : "",
+      flightFrom: hasFlights ? (from || "") : "",
+      flightTo: hasFlights ? (to || "") : "",
+      departDate: hasFlights ? (departDate || "") : "",
+      returnDate: hasFlights ? (returnDate || "") : "",
+      tripType: hasFlights ? (tripType || "") : "",
+      segments: hasFlights && segments.length > 0 ? JSON.stringify(segments) : "",
+      carType: hasCar ? (vehicleType || "") : "",
+      carPickup: hasCar ? (carPickup || "") : "",
+      carPickupDate: hasCar ? (carPickupDate || "") : "",
+      carReturn: hasCar ? (carReturn || "") : "",
+      carReturnDate: hasCar ? (dropOffDate || "") : "",
+      carNotes: hasCar ? (carNotes || "") : "",
+      transferFrom: hasTransfer ? (tFrom || "") : "",
+      transferTo: hasTransfer ? (tTo || "") : "",
+      transferDate: hasTransfer ? (tDate || "") : "",
+      transferType: hasTransfer ? (tType || "") : "",
       notes: notes || "",
       source: "SMT-App",
     });
