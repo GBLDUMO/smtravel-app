@@ -4,7 +4,7 @@ import * as React from "react";
 export default function TravelBookingEmail({
   // Images
   logoUrl = "https://res.cloudinary.com/dmrvd8fwt/image/upload/v1755934208/Logo1_Use_xuoqgm.png",
-  heroUrl = "https://res.cloudinary.com/dmrvd8fwt/image/upload/v1755934231/travel-companies-1_-_k7fhhj.webp",
+  heroUrl = "https://res.cloudinary.com/dmrvd8fwt/image/upload/f_jpg,q_auto/v1763646363/International_Travel_an1zvr.webp",
 
   // NEW: Quote Reference (e.g., SMT-Q10100)
   quoteRef = "",
