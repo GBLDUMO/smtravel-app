@@ -254,7 +254,7 @@ export async function POST(req) {
       name: fullName || "",
       fullName: fullName || "",
       email: userEmail || "",
-      phone: phone || "",
+      phone: (phone || "").replace(/^\+/, ""),
       destCity: destCity || "",
       travelingTo: destCity || "",
       checkIn: checkIn || "",
