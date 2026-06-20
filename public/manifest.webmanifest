@@ -1,0 +1,29 @@
+{
+  "name": "Solid Matter Travel",
+  "short_name": "SM Travel",
+  "description": "Book hotels, flights, car hire and airport transfers — one request, fast confirmation.",
+  "start_url": "/app.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0e14",
+  "theme_color": "#1f55d6",
+  "icons": [
+    {
+      "src": "https://res.cloudinary.com/dmrvd8fwt/image/upload/w_192,h_192,c_pad,b_white/v1755934208/Logo1_Use_xuoqgm.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://res.cloudinary.com/dmrvd8fwt/image/upload/w_512,h_512,c_pad,b_white/v1755934208/Logo1_Use_xuoqgm.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "https://res.cloudinary.com/dmrvd8fwt/image/upload/w_512,h_512,c_pad,b_white/v1755934208/Logo1_Use_xuoqgm.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
