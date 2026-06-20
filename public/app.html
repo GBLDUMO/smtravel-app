@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Solid Matter Travel — App</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+  :root{
+    --blue:#1f55d6; --blue-d:#1844b3; --ink:#16181d; --muted:#6b7280;
+    --cream:#F4F0E7; --line:#E7E2D6; --soft:#EAF1FF;
+    --serif:'Cormorant Garamond',Georgia,serif; --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;font-family:var(--sans);color:var(--ink)}
+  .stage{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 0%,#1b2230,#0c0f15);padding:22px}
+  .phone{width:392px;height:846px;max-height:97vh;background:#000;border-radius:48px;padding:11px;box-shadow:0 50px 120px rgba(0,0,0,.55);position:relative}
+  .screenwrap{position:absolute;inset:11px;border-radius:38px;overflow:hidden;background:var(--cream)}
+
+  /* status bar */
+  .statusbar{position:absolute;top:0;left:0;right:0;height:50px;display:flex;align-items:center;justify-content:space-between;padding:14px 26px 0;font-size:15px;font-weight:600;z-index:40;pointer-events:none}
+  .statusbar .right{display:flex;gap:6px;align-items:center}
+  .statusbar.dark{color:#fff}.statusbar.light{color:#111}
+  .sb-ico{width:17px;height:11px}
+
+  .screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;display:none;-webkit-overflow-scrolling:touch}
+  .screen.active{display:block;animation:fade .3s ease}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .screen::-webkit-scrollbar{display:none}
+
+  /* ===== HOME ===== */
+  #home{background:#0b0e14}
+  .home-hero{position:relative;min-height:846px;background:#0b1020;color:#fff;display:flex;flex-direction:column;padding:62px 26px 120px}
+  .hero-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center center;background:#0b1020;z-index:0}
+  .hero-ov{position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(8,10,16,.4),rgba(8,10,16,.05) 34%,rgba(8,10,16,.9))}
+  .home-top,.home-bottom{position:relative;z-index:2}
+  .home-top{display:flex;align-items:center;justify-content:space-between}
+  .home-top h1{font-family:var(--serif);font-size:30px;font-weight:600;margin:0}
+  .icon-btn{background:rgba(255,255,255,.16);border:0;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:#fff;cursor:pointer;backdrop-filter:blur(6px)}
+  .home-bottom{margin-top:auto}
+  .home-display{font-family:var(--serif);font-size:52px;line-height:1.04;font-weight:600;margin:0 0 26px;color:var(--soft)}
+  .dest{margin-bottom:24px}
+  .dest label{display:block;font-size:17px;color:rgba(255,255,255,.92);margin-bottom:10px}
+  .dest input{width:100%;background:transparent;border:0;border-bottom:1px solid rgba(255,255,255,.6);color:#fff;font-size:17px;padding:6px 0;font-family:inherit}
+  .dest input::placeholder{color:rgba(255,255,255,.55)}
+  .dest input:focus{outline:none;border-color:#fff}
+  .explore{display:flex;align-items:center;gap:12px;color:#fff;font-size:18px;font-weight:500;cursor:pointer;background:none;border:0;font-family:inherit}
+
+  /* ===== SERVICES (journey types) ===== */
+  #services{background:var(--cream)}
+  .sv-pad{padding:64px 22px 130px}
+  .sv-head{font-family:var(--sans);font-size:30px;font-weight:700;margin:0 0 4px;display:flex;align-items:center;justify-content:space-between}
+  .sv-head .icon-btn{background:transparent;color:#111}
+  .sv-label{color:#7a7568;font-size:21px;margin:14px 0 16px;font-weight:500}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .gcard{position:relative;border-radius:18px;overflow:hidden;aspect-ratio:3/4;cursor:pointer;background:#cdd3dd;box-shadow:0 10px 26px rgba(20,24,40,.14)}
+  .gcard .ph{position:absolute;inset:0;background-size:cover;background-position:center;transition:.4s}
+  .gcard:active .ph{transform:scale(1.04)}
+  .gcard .ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.05) 40%,rgba(0,0,0,.65))}
+  .gcard .t{position:absolute;left:16px;right:16px;bottom:16px;color:#fff;font-size:21px;font-weight:600;line-height:1.15}
+  .gcard .gbadge{position:absolute;top:10px;right:10px;background:var(--blue);color:#fff;font-size:11px;font-weight:700;padding:5px 9px;border-radius:999px;display:none;z-index:2;align-items:center;gap:4px}
+  .gcard.added .gbadge{display:flex}
+  .gcard.added{outline:3px solid var(--blue);outline-offset:-3px}
+  .sv-continue{margin-top:22px;display:none}
+  .add-row{display:flex;gap:10px;margin-top:20px}
+  .btn-add{flex:1;background:#fff;border:1px dashed var(--blue);color:var(--blue)}
+  .btn-add:hover{background:#EEF1FE}
+
+  /* ===== DETAIL ===== */
+  #detail{background:#fff}
+  .d-hero{position:relative;height:430px;background-size:cover;background-position:center;color:#fff;display:flex;align-items:flex-end;padding:24px}
+  .d-hero .ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,.05) 45%,rgba(0,0,0,.55))}
+  .d-hero .lbl{position:absolute;top:60px;left:24px;font-size:18px;font-weight:600}
+  .d-hero .x{position:absolute;top:54px;right:22px}
+  .d-hero h2{position:relative;font-family:var(--serif);font-size:46px;font-weight:600;line-height:1.02;margin:0}
+  .d-sub{position:relative;margin:10px 0 0;font-size:17px;font-weight:500;color:rgba(255,255,255,.92);text-shadow:0 1px 8px rgba(0,0,0,.4)}
+  .d-body{padding:26px 24px 130px}
+  .d-lead{font-size:19px;line-height:1.45;color:#1b2230;margin:0 0 22px}
+  .d-lead.catch{font-style:italic;font-weight:700}
+  .d-extra{font-size:15.5px;line-height:1.65;color:var(--muted);margin:0 0 22px}
+  .feat{display:flex;gap:14px;padding:18px 0;border-top:1px solid var(--line)}
+  .feat .fi{color:var(--blue);flex:0 0 auto;margin-top:2px}
+  .feat h4{margin:0 0 4px;font-size:17px;font-weight:700}
+  .feat p{margin:0;color:var(--muted);font-size:14.5px;line-height:1.5}
+  .d-cta{position:absolute;left:0;right:0;bottom:0;padding:16px 22px 26px;background:linear-gradient(180deg,rgba(255,255,255,0),#fff 30%)}
+
+  /* ===== BOOK ===== */
+  #book{background:var(--cream)}
+  .b-pad{padding:60px 22px 140px}
+  .b-top{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+  .b-top h2{font-family:var(--serif);font-size:34px;font-weight:600;margin:0}
+  .b-back{background:#fff;border:1px solid var(--line);width:40px;height:40px;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:#111}
+  .progress{display:flex;gap:6px;margin-bottom:22px}
+  .progress .seg{flex:1;height:5px;border-radius:999px;background:var(--line)}
+  .progress .seg.on{background:var(--blue)}
+  .step{display:none}.step.active{display:block;animation:fade .25s ease}
+  .bstep{display:none}.bstep.active{display:block;animation:fade .25s ease}
+  .eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blue)}
+  .step h3{font-family:var(--serif);font-size:27px;font-weight:600;margin:6px 0 4px}
+  .sub{margin:0 0 18px;font-size:14px;color:var(--muted)}
+
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+  .chip{display:flex;align-items:center;gap:7px;padding:9px 13px;border-radius:999px;border:1px solid var(--line);background:#fff;color:#46505e;font-size:13.5px;font-weight:600;cursor:pointer}
+  .chip svg{width:17px;height:17px}
+  .chip.sel{background:var(--blue);border-color:var(--blue);color:#fff}
+  .chip-label{font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#1b2230;margin:0 0 10px}
+
+  label{display:block;font-size:12.5px;font-weight:600;margin:14px 0 6px;color:#46505e}
+  input,select,textarea{width:100%;padding:13px 13px;border:1px solid var(--line);border-radius:12px;font-size:15px;font-family:inherit;background:#fff;color:var(--ink)}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(31,85,214,.12)}
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .seg-toggle{display:flex;gap:8px}
+  .seg-toggle button{flex:1;padding:11px;border:1px solid var(--line);background:#fff;border-radius:11px;font-weight:600;cursor:pointer;font-size:13.5px;color:#46505e}
+  .seg-toggle button.on{border-color:var(--blue);background:#EAF0FE;color:var(--blue-d)}
+  .err{color:#b91c1c;font-size:12px;margin-top:6px;display:none}
+  .svcblock{border-top:1px solid var(--line);padding-top:18px;margin-top:20px}
+  .blocktitle{font-family:var(--serif);font-size:21px;font-weight:600;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+  .blocktitle svg{width:20px;height:20px;color:var(--blue)}
+
+  .summary{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;font-size:14px}
+  .rv-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-bottom:12px}
+  .rv-head{display:flex;align-items:center;gap:8px;font-family:var(--serif);font-size:19px;font-weight:600;color:#1b2230;margin-bottom:8px}
+  .rv-head svg{width:20px;height:20px;color:var(--blue)}
+  .rv-row{display:flex;justify-content:space-between;gap:14px;padding:8px 0;font-size:14px;border-top:1px solid #efe9dd}
+  .rv-row:first-of-type{border-top:0}
+  .rv-row .k{color:var(--muted)}
+  .rv-row .v{color:#1b2230;font-weight:600;text-align:right}
+  .rv-trav{display:flex;align-items:center;gap:12px}
+  .rv-ini{width:46px;height:46px;border-radius:50%;background:#EEF1FE;color:var(--blue);display:grid;place-items:center;font-weight:700;font-size:16px;flex:0 0 auto}
+  .rv-name{font-weight:700;font-size:16px;color:#1b2230}
+  .rv-sub{font-size:13px;color:var(--muted)}
+  .rv-notes{font-size:14px;color:#1b2230;line-height:1.5}
+  .summary div{padding:3px 0}.summary b{color:#1b2230}
+  .success{text-align:center;padding:30px 6px}
+  .check{width:78px;height:78px;border-radius:50%;background:var(--soft);color:var(--blue);display:grid;place-items:center;margin:0 auto 16px}
+  .ref{display:inline-block;background:#1b2230;color:#fff;font-weight:700;letter-spacing:.06em;padding:11px 22px;border-radius:999px;font-size:17px;margin:6px 0 18px}
+
+  .btn{width:100%;padding:16px;border:0;border-radius:999px;font-size:15.5px;font-weight:700;cursor:pointer}
+  .btn-primary{background:var(--blue);color:#fff;box-shadow:0 10px 24px rgba(31,85,214,.32)}
+  .btn-primary:hover{background:var(--blue-d)}
+  .btn-primary:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+
+  /* tab bar */
+  .tabbar{position:absolute;left:14px;right:14px;bottom:14px;height:64px;display:flex;align-items:center;justify-content:space-around;
+    background:rgba(245,242,235,.92);backdrop-filter:blur(14px);border-radius:999px;box-shadow:0 8px 30px rgba(0,0,0,.18);z-index:30}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:3px;color:#6b7280;font-size:11px;font-weight:600;background:none;border:0;cursor:pointer;padding:6px 14px;border-radius:999px}
+  .tab svg{width:24px;height:24px}
+  .tab.on{color:var(--blue);background:rgba(31,85,214,.10)}
+  .fab{position:absolute;right:18px;bottom:88px;width:60px;height:60px;border-radius:50%;background:var(--blue);color:#fff;border:0;display:grid;place-items:center;cursor:pointer;box-shadow:0 12px 28px rgba(31,85,214,.5);z-index:31}
+  .fab svg{width:26px;height:26px}
+
+  /* ===== AUTH ===== */
+  #auth{background:#0b0e14}
+  .auth-hero{position:relative;min-height:846px;color:#fff;display:flex;flex-direction:column;padding:60px 26px 36px;background:#0b1020}
+  .auth-ov{position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(8,10,16,.55),rgba(8,10,16,.35) 30%,rgba(8,10,16,.92))}
+  .auth-top,.auth-mid{position:relative;z-index:2}
+  .auth-top{display:flex;align-items:center;gap:14px}
+  .auth-brand{font-family:var(--serif);font-size:22px;font-weight:700}
+  .auth-mid{margin-top:auto}
+  .auth-h{font-family:var(--serif);font-size:40px;line-height:1.05;font-weight:600;margin:0 0 8px;color:var(--soft)}
+  .auth-sub{color:rgba(255,255,255,.85);font-size:14.5px;margin:0 0 22px;line-height:1.45}
+  .auth-tabs{display:flex;gap:6px;margin-bottom:18px;background:rgba(255,255,255,.12);border-radius:999px;padding:5px}
+  .auth-tab{flex:1;padding:11px;border:0;border-radius:999px;background:transparent;color:#fff;font-weight:600;font-size:14px;cursor:pointer}
+  .auth-tab.on{background:#fff;color:var(--ink)}
+  .af{margin-bottom:13px}
+  .af label{display:block;color:rgba(255,255,255,.82);font-size:12.5px;margin-bottom:6px}
+  .af input{width:100%;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.26);color:#fff;border-radius:12px;padding:13px;font-size:15px;font-family:inherit}
+  .af input::placeholder{color:rgba(255,255,255,.5)}
+  .af input:focus{outline:none;border-color:#fff;background:rgba(255,255,255,.16)}
+  .auth-err{color:#ffb4b4;font-size:12.5px;margin:2px 0 12px;display:none}
+  .auth-switch{text-align:center;color:rgba(255,255,255,.85);font-size:13.5px;margin-top:16px}
+  .auth-switch a{color:#fff;font-weight:700;cursor:pointer}
+  .auth-or{text-align:center;color:rgba(255,255,255,.5);font-size:12px;margin:14px 0 10px;letter-spacing:.05em}
+  .auth-guest{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.3)}
+  .auth-guest:hover{background:rgba(255,255,255,.2)}
+  .auth-note{display:flex;gap:8px;align-items:flex-start;color:rgba(255,255,255,.72);font-size:11.5px;margin-top:16px;line-height:1.4}
+  .auth-note svg{flex:0 0 auto;margin-top:1px}
+
+  @media(max-width:480px){
+    .stage{padding:0}.phone{width:100vw;height:100vh;max-height:none;border-radius:0;padding:0}
+    .screenwrap{inset:0;border-radius:0}
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="phone">
+    <div class="screenwrap">
+
+      <!-- STATUS BAR -->
+      <div class="statusbar dark" id="statusbar">
+        <span>9:41</span>
+        <span class="right">
+          <svg class="sb-ico" viewBox="0 0 18 11" fill="currentColor"><rect x="0" y="6" width="3" height="5" rx="1"/><rect x="5" y="4" width="3" height="7" rx="1"/><rect x="10" y="2" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="11" rx="1"/></svg>
+          <svg class="sb-ico" viewBox="0 0 18 13" fill="currentColor"><path d="M9 2.5c2.5 0 4.8 1 6.5 2.6l1.4-1.5C14.8 1.5 12 .3 9 .3S3.2 1.5 1.1 3.6L2.5 5.1C4.2 3.5 6.5 2.5 9 2.5z" opacity=".9"/><path d="M9 6c1.4 0 2.7.5 3.6 1.5l1.4-1.5C12.6 4.6 10.9 3.9 9 3.9S5.4 4.6 4 6l1.4 1.5C6.3 6.5 7.6 6 9 6z"/><circle cx="9" cy="10" r="1.6"/></svg>
+          <svg style="width:25px;height:12px" viewBox="0 0 25 12" fill="none"><rect x="1" y="1" width="20" height="10" rx="3" stroke="currentColor" opacity=".5"/><rect x="2.5" y="2.5" width="15" height="7" rx="1.5" fill="currentColor"/><rect x="22.5" y="4" width="1.5" height="4" rx="1" fill="currentColor" opacity=".6"/></svg>
+        </span>
+      </div>
+
+      <!-- ===== HOME ===== -->
+      <div class="screen active" id="home">
+        <div class="home-hero">
+          <img class="hero-bg" src="https://res.cloudinary.com/dmrvd8fwt/image/upload/v1781942687/Call_centre_Travel_agent2_cqbzhd.png" alt="" onerror="heroFallback(this)"/>
+          <div class="hero-ov"></div>
+          <div class="home-top">
+            <h1 id="homeWelcome">Welcome</h1>
+            <button class="icon-btn" aria-label="menu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+          </div>
+          <div class="home-bottom">
+            <h2 class="home-display">Let's start<br/>your journey</h2>
+            <div class="dest">
+              <label>Where are you headed?</label>
+              <input id="homeDest" placeholder="Enter your destination"/>
+            </div>
+            <button class="explore" onclick="go('services')">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
+              Explore services
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== SERVICES ===== -->
+      <div class="screen" id="services">
+        <div class="sv-pad">
+          <div class="sv-head" id="svWelcome">Welcome
+            <button class="icon-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+          </div>
+          <p class="sv-label">Choose your service</p>
+          <div class="grid2" id="svGrid"></div>
+          <button class="btn btn-primary sv-continue" id="svContinue" onclick="continueToBook()">Continue →</button>
+        </div>
+      </div>
+
+      <!-- ===== DETAIL ===== -->
+      <div class="screen" id="detail">
+        <div class="d-hero" id="dHero">
+          <div class="ov"></div>
+          <span class="lbl" id="dLbl"></span>
+          <button class="icon-btn x" onclick="go('services')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+          <h2 id="dHeadline"></h2>
+          <p class="d-sub" id="dSub"></p>
+        </div>
+        <div class="d-body">
+          <p class="d-lead" id="dLead"></p>
+          <p class="d-extra" id="dExtra"></p>
+          <div id="dFeats"></div>
+        </div>
+        <div class="d-cta"><button class="btn btn-primary" id="dCta">Request a quote</button></div>
+      </div>
+
+      <!-- ===== BOOK ===== -->
+      <div class="screen" id="book">
+        <div class="b-pad">
+          <div class="b-top">
+            <button class="b-back" onclick="bookBack()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>
+            <h2 id="bookTitle">Book a journey</h2>
+          </div>
+          <div class="progress" id="progress"></div>
+
+          <!-- TRAVELLER + FIRST SERVICE -->
+          <div class="bstep" data-kind="trip">
+            <h3>Tell us about your trip</h3>
+            <p class="sub">Add or remove services, then fill the basics.</p>
+            <p class="chip-label">Your services</p>
+            <div class="chips" id="svcChips"></div>
+            <div style="margin-top:18px"></div>
+            <p class="chip-label">Main traveller</p>
+            <label>Full name</label><input id="fullName" placeholder="e.g. Thandi Mokoena"/>
+            <div class="g2">
+              <div><label>Email</label><input id="email" type="email" placeholder="you@email.com"/><div class="err" id="emailErr">Enter a valid email.</div></div>
+              <div><label>Phone</label><input id="phone" type="tel" placeholder="+27 ..."/></div>
+            </div>
+            <div id="tripServiceForm" class="svcblock" style="margin-top:20px"></div>
+            <div class="add-row">
+              <button class="btn btn-add" onclick="go('services')">+ Add another service</button>
+            </div>
+          </div>
+
+          <!-- SERVICE (one per page, dynamic) -->
+          <div class="bstep" data-kind="service">
+            <h3 id="svcStepTitle"></h3>
+            <p class="sub">Just the basics — we'll confirm the rest when we reply.</p>
+            <div id="serviceForm"></div>
+            <div class="add-row">
+              <button class="btn btn-add" onclick="go('services')">+ Add another service</button>
+            </div>
+          </div>
+
+          <!-- NOTES -->
+          <div class="bstep" data-kind="notes">
+            <h3>Anything else?</h3>
+            <p class="sub">Budget, preferences, special requests — optional.</p>
+            <label>Notes</label><textarea id="notes" rows="5" placeholder="Any special requests..."></textarea>
+          </div>
+
+          <!-- REVIEW -->
+          <div class="bstep" data-kind="review">
+            <h3>Review &amp; send</h3>
+            <p class="sub">No payment required to receive your quote.</p>
+            <div id="reviewBox"></div>
+          </div>
+
+          <!-- SUCCESS -->
+          <div class="bstep" data-kind="success">
+            <div class="success">
+              <div class="check"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 13l4 4 10-10"/></svg></div>
+              <h3 style="font-size:30px">Request received</h3>
+              <p class="sub">Your agent is on it. Save your reference:</p>
+              <div class="ref" id="refOut">SMT-Q00000</div>
+              <div class="summary" id="successSummary" style="text-align:left"></div>
+              <button class="btn btn-primary" style="margin-top:22px" onclick="resetToHome()">Back to home</button>
+            </div>
+          </div>
+
+          <div style="margin-top:24px" id="navWrap">
+            <button class="btn btn-primary" id="nextBtn">Continue</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== AUTH ===== -->
+      <div class="screen" id="auth">
+        <div class="auth-hero">
+          <div class="auth-top">
+            <button class="b-back" style="background:rgba(255,255,255,.16);border:0;color:#fff" onclick="go('book')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>
+            <span class="auth-brand">Solid Matter Travel</span>
+          </div>
+          <div class="auth-mid">
+            <h2 class="auth-h" id="authH">Create your account</h2>
+            <p class="auth-sub" id="authSub">One step left — create an account to send your quote and track it anytime.</p>
+            <div class="auth-tabs">
+              <button class="auth-tab on" id="tabSignup" onclick="setAuthMode('signup')">Sign up</button>
+              <button class="auth-tab" id="tabComplete" onclick="sendAsGuest()">Complete</button>
+            </div>
+            <div id="authFields">
+              <div class="af" id="afName"><label>Full name</label><input id="authName" placeholder="Your name"/></div>
+              <div class="af"><label>Email</label><input id="authEmail" type="email" placeholder="you@email.com"/></div>
+              <div class="af" id="afPhone"><label>Phone</label><input id="authPhone" type="tel" placeholder="+27 ..."/></div>
+              <div class="af"><label>Password</label><input id="authPass" type="password" placeholder="Create a password"/></div>
+              <div class="auth-err" id="authErr">Please complete all fields (password 6+ characters).</div>
+            </div>
+            <p class="auth-sub" id="completeNote" style="display:none">Quote and reference emailed.</p>
+            <button class="btn btn-primary" id="authCta" onclick="authCtaClick()">Sign up &amp; send →</button>
+            <div class="auth-note">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+              We use your details only to handle your bookings. No payment required to enquire.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB BAR -->
+      <button class="fab" id="fab" onclick="go('services')" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 13l1.5-4.5A2 2 0 0 1 8.4 7h7.2a2 2 0 0 1 1.9 1.5L19 13M5 13h14v4H5zM7 17v2M17 17v2"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/></svg></button>
+      <div class="tabbar" id="tabbar">
+        <button class="tab on" data-tab="home" onclick="go('home')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>Home</button>
+        <button class="tab" data-tab="services" onclick="go('services')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 13l1.5-4.5A2 2 0 0 1 7.4 7h9.2a2 2 0 0 1 1.9 1.5L20 13M4 13h16v4H4zM6 17v2M18 17v2"/></svg>Journeys</button>
+        <button class="tab" data-tab="help" onclick="go('home')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a8 8 0 1 1-3.3-6.5L21 4l-1 4"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 .9-1 1.7M12 16h.01"/></svg>Help</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const SVG={
+  hotel:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7v12M3 13h13a4 4 0 0 1 4 4v2M21 19v-2M7 11h3"/></svg>',
+  flight:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15l-8-2-3 6-2-1 1-5-5-1.5L2 13l-1-1 3-6 16-3a1.5 1.5 0 0 1 1 2.5z"/></svg>',
+  car:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 13l1.5-4.5A2 2 0 0 1 8.4 7h7.2a2 2 0 0 1 1.9 1.5L19 13M4 13h16v4H4zM7 17v2M17 17v2"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/></svg>',
+  transfer:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 16V7a1 1 0 0 1 1-1h11l4 5v5M3 16h16M6 16v2M16 16v2M15 6v5h4"/></svg>'
+};
+const SERVICES={
+  hotel:{label:"Hotels",icon:SVG.hotel,img:"https://res.cloudinary.com/dmrvd8fwt/image/upload/v1781943402/Hotel1_wr8ydh.png",
+    headline:"Rest, sorted.",lead:"The right hotel changes everything.",
+    feats:[]},
+  flight:{label:"Flights",icon:SVG.flight,img:"https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=700&q=75&auto=format&fit=crop",
+    headline:"Up, up & away.",lead:"One-way, return or multi-city — routed to the best fares and the times that suit you.",
+    feats:[["Best fare, best time","We compare routes so you don't have to."],["Multi-city ready","Complex itineraries handled in a single request."]]},
+  car:{label:"Car Hire",icon:SVG.car,img:"https://res.cloudinary.com/dmrvd8fwt/image/upload/v1781954282/Car_hire1_vrlhhp.png",
+    headline:"Take the wheel.",lead:"Economy to luxury and 7-seaters, ready and waiting at your pick-up point.",
+    feats:[["Any vehicle","Economy, SUV, luxury or van — your call."],["Door to door","Pick up and drop off wherever works for you."]]},
+  transfer:{label:"Transfer",icon:SVG.transfer,img:"https://res.cloudinary.com/dmrvd8fwt/image/upload/v1781954939/Transfers_qtpwno.png",
+    headline:"Smooth landings, every time.",lead:"Smart pickups at arrivals and punctual drop-offs at departures.",
+    feats:[["Right place, right time","Your driver tracks your flight and meets you on arrival."],["No waiting","Pre-arranged so you step off and go."]]}
+};
+const ORDER=['hotel','flight','car','transfer'];
+const state={selected:[],data:{},step:0,current:null,user:null,dest:''};
+const escAttr=(s)=>(s||'').replace(/"/g,'&quot;');
+const USERS={}; // mock in-memory "database"
+let authMode='signup';
+
+// hero image fallback chain (the live site image is hotlink-protected when opened locally)
+function heroFallback(img){
+  const fb=[
+    'https://images.unsplash.com/photo-1556745757-8d76bdb6984b?w=1000&q=80&auto=format&fit=crop',
+    'https://picsum.photos/seed/smtravel/1000/1700'
+  ];
+  const i=+(img.dataset.i||0);
+  if(i<fb.length){img.dataset.i=i+1;img.src=fb[i];}
+}
+
+/* build services grid */
+const svGrid=document.getElementById('svGrid');
+['hotel','flight','car','transfer'].forEach(k=>{
+  const s=SERVICES[k];
+  const c=document.createElement('div');c.className='gcard';c.dataset.svc=k;
+  c.innerHTML=`<div class="ph" style="background-image:url('${s.img}')"></div><div class="ov"></div><div class="gbadge">✓ Added</div><div class="t">${s.label}</div>`;
+  c.onclick=()=>openDetail(k);
+  svGrid.appendChild(c);
+});
+const homeDestEl=document.getElementById('homeDest');
+if(homeDestEl)homeDestEl.addEventListener('input',()=>{state.dest=homeDestEl.value.trim();});
+function refreshGridBadges(){
+  document.querySelectorAll('#svGrid .gcard').forEach(c=>c.classList.toggle('added',state.selected.includes(c.dataset.svc)));
+}
+function continueToBook(){
+  if(!state.selected.length)return;
+  buildChips();rebuildFlow();go('book');show(0);
+}
+function resetToHome(){
+  state.selected=[];state.data={};state.step=0;
+  refreshGridBadges();
+  go('home');
+}
+
+/* navigation between screens */
+const screens=[...document.querySelectorAll('.screen')];
+function go(id){
+  screens.forEach(s=>s.classList.toggle('active',s.id===id));
+  document.querySelectorAll('.screen').forEach(s=>s.scrollTop=0);
+  const dark = id==='home'||id==='auth';
+  document.getElementById('statusbar').className='statusbar '+(dark?'dark':'light');
+  document.getElementById('tabbar').style.display=(id==='detail'||id==='book'||id==='auth')?'none':'flex';
+  document.getElementById('fab').style.display=(id==='services')?'grid':'none';
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.tab===id));
+  if(id==='services'){
+    refreshGridBadges();
+    const svc=document.getElementById('svContinue');
+    const n=state.selected.length;
+    if(n){svc.style.display='block';svc.textContent='Continue with '+n+' service'+(n>1?'s':'')+' →';}
+    else{svc.style.display='none';}
+  }
+}
+
+/* detail */
+function openDetail(k){
+  state.current=k;const s=SERVICES[k];
+  document.getElementById('dHero').style.backgroundImage=`url('${s.img}')`;
+  document.getElementById('dLbl').textContent=s.label;
+  let headline=s.headline;
+  if(k==='hotel'&&state.dest) headline=state.dest;   // show the destination they entered
+  document.getElementById('dHeadline').textContent=headline;
+  document.getElementById('dSub').textContent='';
+  const lead=document.getElementById('dLead');
+  lead.textContent=s.lead;
+  lead.classList.toggle('catch',k==='hotel');
+  document.getElementById('dExtra').textContent = k==='hotel'
+    ? "Beachfront or boutique — we find your perfect stay at the best rate. You just unpack."
+    : '';
+  document.getElementById('dFeats').innerHTML=s.feats.map(f=>`<div class="feat"><span class="fi">${s.icon}</span><div><h4>${f[0]}</h4><p>${f[1]}</p></div></div>`).join('');
+  document.getElementById('dCta').textContent='Request a '+s.label.replace(/s$/,'').toLowerCase()+' quote';
+  document.getElementById('dCta').onclick=()=>startQuote(k);
+  go('detail');
+}
+
+/* ===== booking flow engine ===== */
+const NEED={hotel:'hotel_dest',flight:'fl_to',car:'car_pu',transfer:'tr_to'};
+let flow=[]; // e.g. ['trip','svc:hotel','notes','review']  (first service lives on the trip page)
+function rebuildFlow(){
+  const svcs=ORDER.filter(k=>state.selected.includes(k));
+  state.firstSvc=svcs[0]||null;                       // first service shows on the trip page
+  flow=['trip', ...svcs.slice(1).map(k=>'svc:'+k), 'notes', 'review'];
+  const p=document.getElementById('progress');p.innerHTML='';
+  flow.forEach(()=>{const s=document.createElement('div');s.className='seg';p.appendChild(s);});
+}
+function startQuote(k){
+  if(!state.selected.includes(k))state.selected.push(k);
+  rebuildFlow();buildChips();go('book');
+  // land on the page for the service just chosen (trip page if it's the first service)
+  let idx=(k===state.firstSvc)?0:flow.indexOf('svc:'+k);
+  if(idx<0)idx=0;
+  show(idx);
+}
+function buildChips(){
+  const w=document.getElementById('svcChips');w.innerHTML='';
+  ORDER.forEach(k=>{
+    const sel=state.selected.includes(k);
+    const b=document.createElement('button');b.className='chip'+(sel?' sel':'');
+    b.innerHTML=SERVICES[k].icon+'<span>'+SERVICES[k].label+'</span>';
+    b.onclick=()=>{
+      if(state.selected.includes(k)){if(state.selected.length>1)state.selected=state.selected.filter(s=>s!==k);}
+      else state.selected.push(k);
+      buildChips();rebuildFlow();show(0);
+    };
+    w.appendChild(b);
+  });
+  document.getElementById('bookTitle').textContent=state.selected.map(s=>SERVICES[s].label).join(' + ');
+}
+function renderServiceForm(svc,containerId){
+  const c=document.getElementById(containerId);
+  c.innerHTML=`<div class="blocktitle">${SERVICES[svc].icon} ${SERVICES[svc].label}</div>`+tpl(svc);
+  // prefill from saved data, capture defaults so nothing is lost between pages
+  c.querySelectorAll('[data-f]').forEach(el=>{
+    const f=el.dataset.f;
+    if(el.classList.contains('seg-toggle')){
+      const saved=state.data[f];
+      if(saved){el.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===saved));}
+      else{const on=el.querySelector('.on');if(on)state.data[f]=on.dataset.v;}
+    }else{
+      if(state.data[f]!==undefined&&state.data[f]!=='')el.value=state.data[f];
+      else if(el.value)state.data[f]=el.value;
+    }
+  });
+  c.querySelectorAll('input,select').forEach(i=>i.addEventListener('input',()=>{if(i.dataset.f)state.data[i.dataset.f]=i.value;refreshNav();}));
+  c.querySelectorAll('.seg-toggle button').forEach(btn=>btn.addEventListener('click',()=>{
+    const tg=btn.parentElement;tg.querySelectorAll('button').forEach(x=>x.classList.remove('on'));btn.classList.add('on');state.data[tg.dataset.f]=btn.dataset.v;refreshNav();
+  }));
+  const t=document.getElementById('svcStepTitle');if(t)t.textContent=SERVICES[svc].label;
+}
+function tpl(k){
+  if(k==='hotel')return `
+    <label>Travelling to</label><input data-f="hotel_dest" placeholder="e.g. Cape Town" value="${escAttr(state.dest)}"/>
+    <div class="g2"><div><label>Check-in</label><input type="date" data-f="hotel_in"/></div><div><label>Check-out</label><input type="date" data-f="hotel_out"/></div></div>
+    <div class="g2"><div><label>Travellers</label><input type="number" min="1" value="2" data-f="hotel_guests"/></div><div><label>Rooms</label><input type="number" min="1" value="1" data-f="hotel_rooms"/></div></div>
+    <div class="g2"><div><label>Category</label><select data-f="hotel_cat"><option value="">— Select —</option><option>3-star</option><option>4-star</option><option>5-star</option></select></div>
+    <div><label>Meal type</label><select data-f="hotel_meal"><option value="">— Select —</option><option>Room only</option><option>Bed &amp; breakfast</option><option>Half board</option><option>All inclusive</option></select></div></div>`;
+  if(k==='flight')return `
+    <div class="g2"><div><label>From</label><input data-f="fl_from" placeholder="JNB"/></div><div><label>To</label><input data-f="fl_to" placeholder="DXB" value="${escAttr(state.dest)}"/></div></div>
+    <label>Trip type</label><div class="seg-toggle" data-f="fl_type"><button type="button" class="on" data-v="Return">Return</button><button type="button" data-v="One way">One way</button></div>
+    <div class="g2"><div><label>Departure</label><input type="date" data-f="fl_depart"/></div><div><label>Return</label><input type="date" data-f="fl_return"/></div></div>
+    <label>Passengers</label><input type="number" min="1" value="1" data-f="fl_pax"/>`;
+  if(k==='car')return `
+    <div class="g2"><div><label>Pick-up location</label><input data-f="car_pu" placeholder="OR Tambo" value="${escAttr(state.dest)}"/></div><div><label>Return location</label><input data-f="car_ret" placeholder="Same"/></div></div>
+    <div class="g2"><div><label>Pick-up date</label><input type="date" data-f="car_pudate"/></div><div><label>Drop-off date</label><input type="date" data-f="car_dropdate"/></div></div>
+    <label>Vehicle type</label><select data-f="car_type"><option value="">— Select —</option><option>Economy</option><option>SUV</option><option>Luxury</option><option>Van / 7-seater</option></select>`;
+  if(k==='transfer')return `
+    <div class="g2"><div><label>From</label><input data-f="tr_from" placeholder="Airport"/></div><div><label>To</label><input data-f="tr_to" placeholder="Hotel" value="${escAttr(state.dest)}"/></div></div>
+    <div class="g2"><div><label>Date</label><input type="date" data-f="tr_date"/></div><div><label>Type</label><select data-f="tr_type"><option>One way</option><option>Return</option></select></div></div>`;
+  return '';
+}
+
+/* steps */
+const bsteps=[...document.querySelectorAll('#book .bstep')];
+function stepValid(){
+  const kind=flow[state.step];
+  if(kind==='trip'){
+    const nm=document.getElementById('fullName').value.trim();
+    const em=document.getElementById('email').value.trim();
+    if(!(nm!==''&&/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)))return false;
+    if(state.firstSvc){const v=state.data[NEED[state.firstSvc]];return !!(v&&String(v).trim());}
+    return true;
+  }
+  if(kind&&kind.indexOf('svc:')===0){
+    const v=state.data[NEED[kind.slice(4)]];
+    return !!(v&&String(v).trim());
+  }
+  return true;
+}
+function show(n){
+  state.step=n;
+  const kind=flow[n];
+  document.getElementById('progress').style.display='flex';
+  document.getElementById('navWrap').style.display='block';
+  bsteps.forEach(s=>{
+    const k=s.dataset.kind;
+    let on;
+    if(kind&&kind.indexOf('svc:')===0) on=(k==='service');
+    else on=(k===kind);
+    s.classList.toggle('active',on);
+  });
+  if(kind==='trip'&&state.firstSvc) renderServiceForm(state.firstSvc,'tripServiceForm');
+  if(kind&&kind.indexOf('svc:')===0) renderServiceForm(kind.slice(4),'serviceForm');
+  if(kind==='review'){ collect(); renderReview(); }
+  [...document.getElementById('progress').children].forEach((seg,i)=>seg.classList.toggle('on',i<=n));
+  document.getElementById('nextBtn').textContent=(kind==='review')?'Send my request →':'Continue';
+  document.getElementById('book').scrollTop=0;
+  const bp=document.querySelector('#book .b-pad'); if(bp)bp.scrollTop=0;
+  refreshNav();
+}
+function showSuccess(){
+  bsteps.forEach(s=>s.classList.toggle('active',s.dataset.kind==='success'));
+  document.getElementById('progress').style.display='none';
+  document.getElementById('navWrap').style.display='none';
+}
+function refreshNav(){document.getElementById('nextBtn').disabled=!stepValid();}
+function advance(){
+  if(!stepValid())return;
+  const kind=flow[state.step];
+  if(kind==='review'){ collect(); if(state.user){submit();}else{openAuth();} return; }
+  show(state.step+1);
+}
+
+/* ===== soft-gate auth ===== */
+function openAuth(){
+  const d=state.data||{};
+  document.getElementById('authName').value=d.fullName||'';
+  document.getElementById('authEmail').value=d.email||'';
+  document.getElementById('authPhone').value=d.phone||'';
+  document.getElementById('authErr').style.display='none';
+  setAuthMode('signup');
+  go('auth');
+}
+function setAuthMode(m){
+  // only the Sign up view lives here; "Complete" sends immediately (see tab onclick)
+  authMode='signup';
+  document.getElementById('tabSignup').classList.add('on');
+  document.getElementById('tabComplete').classList.remove('on');
+  document.getElementById('authFields').style.display='block';
+  document.getElementById('authCta').style.display='block';
+  document.getElementById('authSub').style.display='block';
+  document.getElementById('completeNote').style.display='none';
+  document.getElementById('authH').textContent='Create your account';
+  document.getElementById('authSub').textContent='Create an account to track your trips and rebook in one tap.';
+}
+function authCtaClick(){ authSubmit(); }
+function sendAsGuest(){
+  // no account — just send the request with the details already collected
+  state.user=null;
+  go('book');submit();
+}
+function authSubmit(){
+  const name=document.getElementById('authName').value.trim();
+  const email=document.getElementById('authEmail').value.trim();
+  const phone=document.getElementById('authPhone').value.trim();
+  const pass=document.getElementById('authPass').value;
+  const emailOk=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
+  if(!(name!=='' && emailOk && pass.length>=6)){document.getElementById('authErr').style.display='block';return;}
+  // sign up -> add to the client database (mock here, Supabase in production)
+  USERS[email]={name,email,phone,pass,createdAt:Date.now()};
+  state.user=USERS[email];
+  const wn=state.user.name||'there';
+  document.getElementById('homeWelcome').textContent='Welcome, '+wn;
+  document.getElementById('svWelcome').firstChild.textContent='Welcome, '+wn;
+  go('book');submit();
+}
+document.getElementById('nextBtn').onclick=advance;
+function bookBack(){
+  if(state.step>0){show(state.step-1);}
+  else go('services');
+}
+function collect(){
+  // service-field values are already saved live into state.data; just merge traveller + notes
+  state.data.fullName=document.getElementById('fullName').value;
+  state.data.email=document.getElementById('email').value;
+  state.data.phone=document.getElementById('phone').value;
+  state.data.notes=document.getElementById('notes').value;
+}
+function line(l,v){return v&&String(v).trim()?`<div><b>${l}:</b> ${v}</div>`:'';}
+function blockSummary(d){
+  let h='';
+  if(state.selected.includes('hotel'))h+=`<div style="margin-top:8px"><b>Hotel</b></div>`+line('Destination',d.hotel_dest)+line('Dates',[d.hotel_in,d.hotel_out].filter(Boolean).join(' → '))+line('Travellers',d.hotel_guests)+line('Rooms',d.hotel_rooms)+line('Category',d.hotel_cat)+line('Meal',d.hotel_meal);
+  if(state.selected.includes('flight'))h+=`<div style="margin-top:8px"><b>Flights</b></div>`+line('Route',[d.fl_from,d.fl_to].filter(Boolean).join(' → '))+line('Trip',d.fl_type)+line('Depart',d.fl_depart)+line('Return',d.fl_return)+line('Passengers',d.fl_pax);
+  if(state.selected.includes('car'))h+=`<div style="margin-top:8px"><b>Car Hire</b></div>`+line('Pick-up',d.car_pu)+line('Return',d.car_ret)+line('Dates',[d.car_pudate,d.car_dropdate].filter(Boolean).join(' → '))+line('Vehicle',d.car_type);
+  if(state.selected.includes('transfer'))h+=`<div style="margin-top:8px"><b>Transfer</b></div>`+line('Route',[d.tr_from,d.tr_to].filter(Boolean).join(' → '))+line('Date',d.tr_date)+line('Type',d.tr_type);
+  return h;
+}
+function rvRow(k,v){return (v&&String(v).trim())?`<div class="rv-row"><span class="k">${k}</span><span class="v">${v}</span></div>`:'';}
+function rvCard(icon,title,rows){return rows.trim()?`<div class="rv-card"><div class="rv-head">${icon}${title}</div>${rows}</div>`:'';}
+function renderReview(){
+  const d=state.data;
+  const initials=(d.fullName||'?').trim().split(/\s+/).map(x=>x[0]||'').slice(0,2).join('').toUpperCase()||'?';
+  let html=`<div class="rv-card"><div class="rv-trav"><div class="rv-ini">${initials}</div><div><div class="rv-name">${d.fullName||'—'}</div><div class="rv-sub">${d.email||''}${d.phone?(' · '+d.phone):''}</div></div></div></div>`;
+  if(state.selected.includes('hotel'))html+=rvCard(SERVICES.hotel.icon,'Hotel',rvRow('Destination',d.hotel_dest)+rvRow('Dates',[d.hotel_in,d.hotel_out].filter(Boolean).join(' → '))+rvRow('Travellers',d.hotel_guests)+rvRow('Rooms',d.hotel_rooms)+rvRow('Category',d.hotel_cat)+rvRow('Meal',d.hotel_meal));
+  if(state.selected.includes('flight'))html+=rvCard(SERVICES.flight.icon,'Flights',rvRow('Route',[d.fl_from,d.fl_to].filter(Boolean).join(' → '))+rvRow('Trip',d.fl_type)+rvRow('Depart',d.fl_depart)+rvRow('Return',d.fl_return)+rvRow('Passengers',d.fl_pax));
+  if(state.selected.includes('car'))html+=rvCard(SERVICES.car.icon,'Car Hire',rvRow('Pick-up',d.car_pu)+rvRow('Return',d.car_ret)+rvRow('Dates',[d.car_pudate,d.car_dropdate].filter(Boolean).join(' → '))+rvRow('Vehicle',d.car_type));
+  if(state.selected.includes('transfer'))html+=rvCard(SERVICES.transfer.icon,'Transfer',rvRow('Route',[d.tr_from,d.tr_to].filter(Boolean).join(' → '))+rvRow('Date',d.tr_date)+rvRow('Type',d.tr_type));
+  if(d.notes&&d.notes.trim())html+=`<div class="rv-card"><div class="rv-head">Notes</div><div class="rv-notes">${d.notes}</div></div>`;
+  document.getElementById('reviewBox').innerHTML=html;
+}
+function submit(){
+  collect();
+  const ref='SMT-Q'+Math.floor(10000+Math.random()*89999);
+  document.getElementById('refOut').textContent=ref;
+  document.getElementById('successSummary').innerHTML=`<div><b>Services:</b> ${state.selected.map(s=>SERVICES[s].label).join(', ')}</div>`+blockSummary(state.data);
+  showSuccess();
+}
+document.addEventListener('input',e=>{
+  if(e.target.id==='email'){const v=e.target.value.trim(),ok=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v);document.getElementById('emailErr').style.display=(v&&!ok)?'block':'none';}
+});
+go('home');
+</script>
+</body>
+</html>
