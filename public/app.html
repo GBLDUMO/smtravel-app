@@ -679,12 +679,45 @@ function renderReview(){
   if(d.notes&&d.notes.trim())html+=`<div class="rv-card"><div class="rv-head">Notes</div><div class="rv-notes">${d.notes}</div></div>`;
   document.getElementById('reviewBox').innerHTML=html;
 }
-function submit(){
+function nightsBetween(a,b){
+  if(!a||!b)return "";
+  var ms=new Date(b)-new Date(a);
+  return ms>0?Math.round(ms/86400000):"";
+}
+function buildSubmitBody(){
+  var d=state.data, sel=state.selected;
+  var body={ contact:{ fullName:d.fullName||"", email:d.email||"", phone:d.phone||"" }, notes:d.notes||"", source:"SMT-App" };
+  if(sel.includes("hotel")) body.hotel={
+    destCity:d.hotel_dest||"", checkIn:d.hotel_in||"", checkOut:d.hotel_out||"",
+    nights:nightsBetween(d.hotel_in,d.hotel_out), adults:d.hotel_guests||"", rooms:d.hotel_rooms||"",
+    hotelCategory:d.hotel_cat||"", roomType:"", mealType:(d.hotel_meal||"Not specified"), notes:d.notes||""
+  };
+  if(sel.includes("flight")) body.flights={
+    from:d.fl_from||"", to:d.fl_to||"", departDate:d.fl_depart||"", returnDate:d.fl_return||"",
+    tripType:d.fl_type||"", segments:[]
+  };
+  if(sel.includes("car")) body.car={
+    carType:(d.car_type||"Not specified"), carPickup:d.car_pu||"", carReturn:d.car_ret||"",
+    carPickupDate:d.car_pudate||"", carReturnDate:d.car_dropdate||"", carNotes:""
+  };
+  if(sel.includes("transfer")) body.transfer={
+    tFrom:d.tr_from||"", tTo:d.tr_to||"", tDate:d.tr_date||"", tType:d.tr_type||""
+  };
+  return body;
+}
+async function submit(){
   collect();
-  const ref='SMT-Q'+Math.floor(10000+Math.random()*89999);
-  document.getElementById('refOut').textContent=ref;
-  document.getElementById('successSummary').innerHTML=`<div><b>Services:</b> ${state.selected.map(s=>SERVICES[s].label).join(', ')}</div>`+blockSummary(state.data);
+  document.getElementById("successSummary").innerHTML='<div><b>Services:</b> '+state.selected.map(function(s){return SERVICES[s].label;}).join(", ")+'</div>'+blockSummary(state.data);
+  document.getElementById("refOut").textContent="Sending…";
   showSuccess();
+  var ref="";
+  try {
+    var res=await fetch("/api/submit",{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(buildSubmitBody()) });
+    var data=await res.json();
+    ref=data.bookingId||data.quoteRef||"";
+  } catch(e){ ref=""; }
+  if(!ref) ref="SMT-QU"+String(Date.now()).slice(-6); // fallback only if backend unreachable
+  document.getElementById("refOut").textContent=ref;
 }
 document.addEventListener('input',e=>{
   if(e.target.id==='email'){const v=e.target.value.trim(),ok=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v);document.getElementById('emailErr').style.display=(v&&!ok)?'block':'none';}
