@@ -380,16 +380,16 @@ const SVG={
   transfer:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 16V7a1 1 0 0 1 1-1h11l4 5v5M3 16h16M6 16v2M16 16v2M15 6v5h4"/></svg>'
 };
 const SERVICES={
-  hotel:{label:"Hotels",icon:SVG.hotel,img:"https://res.cloudinary.com/dmrvd8fwt/image/upload/v1781943402/Hotel1_wr8ydh.png",
+  hotel:{label:"Hotels",icon:SVG.hotel,img:"https://res.cloudinary.com/dmrvd8fwt/image/upload/f_auto,q_auto,w_600,c_fill,g_auto/v1781943402/Hotel1_wr8ydh.png",
     headline:"Rest, sorted.",lead:"The right hotel changes everything.",
     feats:[]},
   flight:{label:"Flights",icon:SVG.flight,img:"https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=700&q=75&auto=format&fit=crop",
     headline:"Up, up & away.",lead:"One-way, return or multi-city — routed to the best fares and the times that suit you.",
     feats:[["Best fare, best time","We compare routes so you don't have to."],["Multi-city ready","Complex itineraries handled in a single request."]]},
-  car:{label:"Car Hire",icon:SVG.car,img:"https://res.cloudinary.com/dmrvd8fwt/image/upload/v1781954282/Car_hire1_vrlhhp.png",
+  car:{label:"Car Hire",icon:SVG.car,img:"https://res.cloudinary.com/dmrvd8fwt/image/upload/f_auto,q_auto,w_600,c_fill,g_auto/v1781954282/Car_hire1_vrlhhp.png",
     headline:"Take the wheel.",lead:"Economy to luxury and 7-seaters, ready and waiting at your pick-up point.",
     feats:[["Any vehicle","Economy, SUV, luxury or van — your call."],["Door to door","Pick up and drop off wherever works for you."]]},
-  transfer:{label:"Transfer",icon:SVG.transfer,img:"https://res.cloudinary.com/dmrvd8fwt/image/upload/v1781954939/Transfers_qtpwno.png",
+  transfer:{label:"Transfer",icon:SVG.transfer,img:"https://res.cloudinary.com/dmrvd8fwt/image/upload/f_auto,q_auto,w_600,c_fill,g_auto/v1781954939/Transfers_qtpwno.png",
     headline:"Smooth landings, every time.",lead:"Smart pickups at arrivals and punctual drop-offs at departures.",
     feats:[["Right place, right time","Your driver tracks your flight and meets you on arrival."],["No waiting","Pre-arranged so you step off and go."]]}
 };
@@ -418,6 +418,8 @@ const svGrid=document.getElementById('svGrid');
   c.onclick=()=>openDetail(k);
   svGrid.appendChild(c);
 });
+// preload service + detail images at startup so they appear instantly
+['hotel','flight','car','transfer'].forEach(function(k){ var im=new Image(); im.src=SERVICES[k].img; });
 const homeDestEl=document.getElementById('homeDest');
 if(homeDestEl)homeDestEl.addEventListener('input',()=>{state.dest=homeDestEl.value.trim();});
 function refreshGridBadges(){
