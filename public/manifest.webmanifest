@@ -2,7 +2,7 @@
   "name": "Solid Matter Travel",
   "short_name": "SM Travel",
   "description": "Book hotels, flights, car hire and airport transfers — one request, fast confirmation.",
-  "start_url": "/app.html",
+  "start_url": "/app",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
