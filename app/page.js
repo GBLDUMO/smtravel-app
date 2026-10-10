@@ -56,25 +56,25 @@ function initialTransfer() {
 export default function Page() {
   // theme (CSS variables)
   const themeVars = {
-    '--brand-navy': '#0b3c91',
-    '--brand-teal': '#038b73',
-    '--brand-green': '#0ea76a',
-    '--brand-amber': '#f59e0b',
-    '--brand-ink': '#0f172a',
+    '--brand-navy': '#0e1e4a',
+    '--brand-teal': '#1b3a9e',
+    '--brand-green': '#1f7a45',
+    '--brand-amber': '#e5a50a',
+    '--brand-ink': '#1b2232',
     '--brand-paper': '#ffffff',
-    '--brand-cloud': '#f7fafc',
-    '--brand-navy-22': '#0b3c9122',
-    '--brand-navy-33': '#0b3c9133',
-    '--brand-navy-55': '#0b3c9155',
-    '--brand-navy-66': '#0b3c9166',
-    '--brand-navy-08': '#0b3c9108',
-    '--brand-navy-0d': '#0b3c910d',
-    '--brand-amber-33': '#f59e0b33',
-    '--brand-green-15': '#0ea76a15',
-    '--brand-green-33': '#0ea76a33',
+    '--brand-cloud': '#f5f7fb',
+    '--brand-navy-22': '#0e1e4a22',
+    '--brand-navy-33': '#0e1e4a33',
+    '--brand-navy-55': '#0e1e4a55',
+    '--brand-navy-66': '#0e1e4a66',
+    '--brand-navy-08': '#0e1e4a08',
+    '--brand-navy-0d': '#0e1e4a0d',
+    '--brand-amber-33': '#e5a50a33',
+    '--brand-green-15': '#1f7a4515',
+    '--brand-green-33': '#1f7a4533',
   };
-  const gradientBg =
-    'linear-gradient(180deg, var(--brand-navy) 0%, var(--brand-teal) 42%, var(--brand-cloud) 100%)';
+  // Plain light page behind the booking form (the homepage hero covers it)
+  const gradientBg = 'var(--brand-cloud)';
 
   // which section: null = landing, 0..3 = active section
   const [tab, setTab] = useState(null);
@@ -211,7 +211,7 @@ export default function Page() {
   useEffect(() => {
     if (process.env.NODE_ENV === 'production') return;
     const root = document.querySelector('main');
-    const ok = root && getComputedStyle(root).getPropertyValue('--brand-navy').trim() === '#0b3c91';
+    const ok = root && getComputedStyle(root).getPropertyValue('--brand-navy').trim() === '#0e1e4a';
     console.table([{ test: 'CSS var --brand-navy set', pass: !!ok }]);
   }, []);
 
@@ -463,29 +463,37 @@ export default function Page() {
       {/* Shared styles */}
       <style jsx global>{`
         .brand-input {
-          border: 1px solid var(--brand-navy-22);
+          border: 1px solid #cdd4e1;
           background: #fff;
-          padding: 0.5rem 0.75rem;
+          color: var(--brand-ink);
+          padding: 0.65rem 0.875rem;
+          min-height: 48px;
           border-radius: 0.625rem;
           outline: none;
+          font-family: inherit;
+          font-size: 15px;
           transition: box-shadow 0.2s, border-color 0.2s, transform 0.02s;
+        }
+        .brand-input::placeholder {
+          color: #6b7486;
         }
         .brand-input:focus {
           border-color: var(--brand-navy);
           box-shadow: 0 0 0 4px var(--brand-amber-33);
         }
         .brand-btn-primary {
-          padding: 0.6rem 1rem;
+          padding: 0.75rem 1.5rem;
+          min-height: 48px;
           border-radius: 9999px;
           color: white;
-          background: #2563eb;
-          border: 1px solid #1d4ed8;
-          box-shadow: 0 8px 16px var(--brand-navy-22), inset 0 -2px 0 var(--brand-navy-66);
+          font-weight: 600;
+          background: var(--brand-navy);
+          border: 1px solid var(--brand-navy);
+          box-shadow: 0 8px 16px var(--brand-navy-22);
           transition: transform 0.06s, box-shadow 0.2s, filter 0.2s, background 0.2s;
         }
         .brand-btn-primary:hover {
-          filter: brightness(1.03);
-          background: #1d4ed8;
+          background: #1a2d66;
         }
         .brand-btn-primary:active {
           transform: translateY(1px);
@@ -495,11 +503,13 @@ export default function Page() {
           cursor: not-allowed;
         }
         .brand-btn-secondary {
-          padding: 0.6rem 1rem;
+          padding: 0.75rem 1.5rem;
+          min-height: 48px;
           border-radius: 9999px;
+          font-weight: 600;
           background: #fff;
           color: var(--brand-navy);
-          border: 1px solid var(--brand-navy-55);
+          border: 1px solid var(--brand-navy);
           transition: background 0.2s, border-color 0.2s, transform 0.06s;
         }
         .brand-btn-secondary:hover {

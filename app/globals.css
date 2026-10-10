@@ -1,34 +1,52 @@
 @import "tailwindcss";
 
+/* ---------------------------------------------
+   Solid Matter Travel — brand tokens
+   --------------------------------------------- */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --smt-navy: #0E1E4A;      /* main brand colour */
+  --smt-blue: #1B3A9E;      /* icons, links */
+  --smt-gold: #E5A50A;      /* accent */
+  --smt-gold-text: #8A5A00; /* gold that is readable on white */
+  --smt-green: #1F7A45;     /* WhatsApp */
+  --smt-bg: #F5F7FB;        /* page background */
+  --smt-line: #E3E7EF;      /* borders */
+  --smt-ink: #1B2232;       /* body text */
+  --smt-muted: #4F596C;     /* secondary text */
+
+  --background: var(--smt-bg);
+  --foreground: var(--smt-ink);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-smt-navy: var(--smt-navy);
+  --color-smt-blue: var(--smt-blue);
+  --color-smt-gold: var(--smt-gold);
+  --color-smt-green: var(--smt-green);
+  --font-sans: var(--font-jost), system-ui, sans-serif;
+  --font-serif: var(--font-cormorant), Georgia, serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-/* ✅ Ensure background covers the full viewport */
 html, body {
   height: 100%;
   margin: 0;
   padding: 0;
 }
 
-/* ✅ Transparent so the background image shows */
 body {
-  background: transparent;
+  background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-jost), system-ui, sans-serif;
+}
+
+/* Headings use the brand serif */
+h1, h2, h3 {
+  font-family: var(--font-cormorant), Georgia, serif;
+  letter-spacing: -0.005em;
+}
+
+a {
+  color: var(--smt-blue);
 }
