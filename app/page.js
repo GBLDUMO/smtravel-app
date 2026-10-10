@@ -92,7 +92,9 @@ export default function Page() {
   // flow flags
   // enabled[1], enabled[2], enabled[3] correspond to Flights, Car Hire, Airport Transfer promptable sections
   const [enabled, setEnabled] = useState({ 1: undefined, 2: undefined, 3: undefined });
-  const [confirmSection, setConfirmSection] = useState(null);
+  // services added to this request, in the order the traveller chose them
+  const [order, setOrder] = useState([]);
+  const [stepError, setStepError] = useState('');
 
   // UX
   const [sending, setSending] = useState(false);
@@ -108,43 +110,65 @@ export default function Page() {
   // validation checker bound to state
   const isRequiredFilled = isRequiredFilledFactory({ hotel, flights, car, transfer, enabled });
 
+  // DEMO GUARD: only the live site sends requests; previews never touch the Sheet, email or back office
+  const isLiveSite = () => typeof window !== 'undefined' && window.location.hostname === 'book.smtravel.co.za';
+
+  // Required fields per service: the base rules plus the field the back office uses to detect the service
+  function isComplete(i) {
+    if (!isRequiredFilled(i)) return false;
+    if (i === 0) return !!hotel.mealType;
+    if (i === 1) return !!flights.tripType;
+    if (i === 2) return !!car.carType;
+    return true;
+  }
+  const MISSING_HINT = [
+    'Please add the destination, check-in and check-out dates, and meal type.',
+    'Please add where you are flying from and to, and the trip type.',
+    'Please add the pickup and return details, return date, and car type.',
+    'Please add where the transfer goes to and the date.',
+  ];
+
   function onLandingClick(i) {
     if (PROMPTABLE.has(i)) setEnabled((prev) => ({ ...prev, [i]: true }));
+    setOrder([i]);
+    setStepError('');
     setTab(i);
   }
 
-  function findNextIndex(start) {
-    let i = start + 1;
-    while (i < SECTIONS.length && enabled[i] === false) i++;
-    return Math.min(i, SECTIONS.length - 1);
-  }
-
-  function goNext() {
+  // Open another service (current one must be complete first)
+  function addService(i) {
     if (tab === null) return;
-    if (!isRequiredFilled(tab)) {
-      alert('Please fill the required fields for this section.');
+    if (!isComplete(tab)) {
+      setStepError(MISSING_HINT[tab]);
       return;
     }
-    const candidate = findNextIndex(tab);
-    if (PROMPTABLE.has(candidate) && enabled[candidate] === undefined) {
-      setConfirmSection(candidate);
-      return;
-    }
-    setTab(candidate);
+    if (PROMPTABLE.has(i)) setEnabled((prev) => ({ ...prev, [i]: true }));
+    setOrder((prev) => (prev.includes(i) ? prev : [...prev, i]));
+    setStepError('');
+    setTab(i);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  function includeSection(i) {
-    setEnabled((prev) => ({ ...prev, [i]: true }));
-    setConfirmSection(null);
+  // Jump back to a service already in the request
+  function openService(i) {
+    setStepError('');
     setTab(i);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
   }
-  function skipSection(i) {
-    setEnabled((prev) => ({ ...prev, [i]: false }));
-    setConfirmSection(null);
-    setTab(findNextIndex(i));
+
+  function goBack() {
+    const idx = order.indexOf(tab);
+    setStepError('');
+    if (idx <= 0) setTab(null);
+    else setTab(order[idx - 1]);
   }
 
   async function post(payload) {
+    if (!isLiveSite()) {
+      // eslint-disable-next-line no-console
+      console.info('[demo] request not sent', payload);
+      return;
+    }
     try {
       await fetch('/api/submit', {
         method: 'POST',
@@ -156,31 +180,27 @@ export default function Page() {
     }
   }
 
-  // ----- FIXED: async functions only once, no stray code after them
-  async function submitFull() {
-    if (tab === null || !isRequiredFilled(tab)) return;
-    setSending(true);
-    await post({ contact, hotel, flights, car, transfer, enabled });
-    setSending(false);
-    thankAndReset(5000);
-  }
-
   async function completeNow() {
-    if (tab === null || !isRequiredFilled(tab)) {
-      alert('Please finish the required fields first.');
+    if (tab === null) return;
+    const incomplete = order.find((i) => !isComplete(i));
+    if (incomplete !== undefined) {
+      setTab(incomplete);
+      setStepError(MISSING_HINT[incomplete]);
       return;
     }
-    // stop auto-filling later sections so only the completed section is sent
-    setAllowAutoFill(false);
-
     setSending(true);
+    // Services not added are sent blank, so the back office only sees what was requested
+    const has = (i) => order.includes(i);
     await post({
       contact,
-      hotel,
-      flights,
-      car,
-      transfer,
-      enabled,
+      hotel: has(0) ? hotel : initialHotel(),
+      flights: has(1) ? flights : initialFlights(),
+      car: has(2) ? car : initialCar(),
+      transfer: has(3)
+        ? { ...transfer, tFrom: transfer.tFrom || (has(1) ? flights.to : ''), tType: transfer.tType || 'One way' }
+        : initialTransfer(),
+      enabled: { 1: has(1), 2: has(2), 3: has(3) },
+      services: order.map((i) => SECTIONS[i]),
       endedEarly: true,
       endedAt: SECTIONS[tab],
     });
@@ -198,7 +218,8 @@ export default function Page() {
     setEnabled({ 1: undefined, 2: undefined, 3: undefined });
     setCarPickupTouched(false);
     setCarReturnTouched(false);
-    setConfirmSection(null);
+    setOrder([]);
+    setStepError('');
     setTab(null);
     setAllowAutoFill(true);
   }
@@ -226,16 +247,14 @@ export default function Page() {
   const STEP_SHORT = ['Hotel', 'Flights', 'Car hire', 'Airport transfer'];
   const STEP_LEGENDS = ['Your stay', 'Your flight', 'Your vehicle', 'Your transfer'];
   const STEP_ICONS = [BedDouble, Plane, Car, PlaneLanding];
-  const PROMPT_COPY = {
-    1: { q: 'Do you need flights?', yes: 'Yes, add flights' },
-    2: { q: 'Do you need car hire?', yes: 'Yes, add car hire' },
-    3: { q: 'Do you need an airport transfer?', yes: 'Yes, add a transfer' },
-  };
+  const remaining = SECTIONS.map((_, i) => i).filter((i) => !order.includes(i));
+  const position = Math.max(0, order.indexOf(tab));
   const firstName = (contact.fullName || '').trim().split(/\s+/)[0];
 
   return (
     <div data-smt-root className="min-h-screen" style={{ ...themeVars, background: gradientBg }}>
       <SiteHeader onHome={tab === null ? undefined : () => setTab(null)} />
+      <DemoBanner />
 
       {/* Landing */}
       {tab === null ? (
@@ -306,13 +325,14 @@ export default function Page() {
           <ol aria-label="Booking steps" className="m-0 grid list-none grid-cols-4 gap-2 p-0 md:gap-3">
             {SECTIONS.map((_, i) => {
               const active = i === tab;
-              const skipped = enabled[i] === false;
-              const done = i < tab && !skipped;
+              const done = !active && order.includes(i);
               return (
                 <li
                   key={i}
                   aria-current={active ? 'step' : undefined}
-                  className="flex min-w-0 flex-col items-center gap-1.5 rounded-xl px-2 py-2.5 text-center md:flex-row md:gap-3 md:px-4 md:py-3.5 md:text-left"
+                  onClick={done ? () => openService(i) : undefined}
+                  title={done ? `Edit ${STEP_SHORT[i].toLowerCase()}` : undefined}
+                  className={`flex min-w-0 flex-col items-center gap-1.5 rounded-xl px-2 py-2.5 text-center md:flex-row md:gap-3 md:px-4 md:py-3.5 md:text-left ${done ? 'cursor-pointer' : ''}`}
                   style={{
                     background: active ? '#0E1E4A' : '#FFFFFF',
                     border: active ? '1px solid #0E1E4A' : '1px solid #E3E7EF',
@@ -333,7 +353,7 @@ export default function Page() {
                   </span>
                   <span className={`min-w-0 text-xs md:text-[15px] ${active ? 'font-semibold' : 'font-medium'}`}>
                     {STEP_SHORT[i]}
-                    {skipped && <span className="block text-[11px] font-normal md:inline"> · skipped</span>}
+                    {done && <span className="block text-[11px] font-normal md:inline"> · added</span>}
                   </span>
                 </li>
               );
@@ -345,7 +365,7 @@ export default function Page() {
             <section className="min-w-0 overflow-hidden rounded-[18px] bg-white" style={{ flex: '999 1 640px', border: '1px solid #E3E7EF' }}>
               <div className="flex flex-col gap-1.5 border-b px-5 pb-5 pt-6 md:px-8 md:pt-7" style={{ borderColor: '#E3E7EF' }}>
                 <div className="text-[13px] font-semibold tracking-[0.14em]" style={{ color: '#8A5A00' }}>
-                  STEP {tab + 1} OF {SECTIONS.length}{isLast ? ' · LAST STEP' : ''}
+                  SERVICE {position + 1} OF {order.length} IN YOUR REQUEST
                 </div>
                 <h1 className="m-0 text-[34px] font-semibold md:text-[40px]" style={{ color: '#0E1E4A' }}>
                   {STEP_TITLES[tab]}
@@ -447,33 +467,37 @@ export default function Page() {
               </div>
 
               {/* Buttons */}
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t px-5 py-5 md:px-8" style={{ borderColor: '#E3E7EF', background: '#FAFBFD' }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (tab === 0) setTab(null);
-                    else if (tab !== null) setTab(Math.max(0, tab - 1));
-                  }}
-                  className="smt-btn-text"
-                >
-                  ← {tab === 0 ? 'Back' : `Back to ${STEP_SHORT[tab - 1].toLowerCase()}`}
-                </button>
+              <div className="flex flex-col gap-4 border-t px-5 py-5 md:px-8" style={{ borderColor: '#E3E7EF', background: '#FAFBFD' }}>
+                {remaining.length > 0 && (
+                  <div className="flex flex-col gap-2.5">
+                    <div className="text-sm font-semibold" style={{ color: '#0E1E4A' }}>Need anything else for this trip?</div>
+                    <div className="flex flex-wrap gap-2.5">
+                      {remaining.map((i) => {
+                        const Icon = STEP_ICONS[i];
+                        return (
+                          <button key={i} type="button" onClick={() => addService(i)} className="brand-btn-secondary">
+                            <Icon size={18} strokeWidth={1.9} aria-hidden="true" />
+                            Add {STEP_SHORT[i].toLowerCase()}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
-                <div className="ml-auto flex flex-wrap gap-3">
-                  {isLast ? (
-                    <button onClick={completeNow} disabled={sending} className="brand-btn-gold">
-                      {sending ? 'Sending…' : 'Submit booking request'}
-                    </button>
-                  ) : (
-                    <>
-                      <button onClick={completeNow} disabled={sending} className="brand-btn-secondary">
-                        {sending ? 'Sending…' : tab === 0 ? 'Submit hotel only' : 'Submit request now'}
-                      </button>
-                      <button onClick={goNext} className="brand-btn-primary">
-                        Continue to {STEP_SHORT[findNextIndex(tab)].toLowerCase()} →
-                      </button>
-                    </>
-                  )}
+                {stepError && (
+                  <p role="alert" className="m-0 text-sm font-medium" style={{ color: '#B42318' }}>{stepError}</p>
+                )}
+
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4" style={{ borderColor: '#E3E7EF' }}>
+                  <button type="button" onClick={goBack} className="smt-btn-text">
+                    ← {position === 0 ? 'Back' : `Back to ${STEP_SHORT[order[position - 1]].toLowerCase()}`}
+                  </button>
+                  <button onClick={completeNow} disabled={sending} className="brand-btn-gold ml-auto">
+                    {sending
+                      ? 'Sending…'
+                      : `Submit booking request${order.length > 1 ? ` (${order.length} services)` : ''}`}
+                  </button>
                 </div>
               </div>
             </section>
@@ -483,7 +507,7 @@ export default function Page() {
               <div className="flex flex-col gap-4 rounded-[18px] bg-white p-6" style={{ border: '1px solid #E3E7EF' }}>
                 <div className="text-[17px] font-semibold" style={{ color: '#0E1E4A' }}>What happens next</div>
                 {[
-                  'Add the services you need, or submit after any step.',
+                  'Add any other services at the bottom of the form, then submit once.',
                   'Our team checks availability with our suppliers.',
                   'You receive one quote by email.',
                 ].map((t, i) => (
@@ -511,33 +535,6 @@ export default function Page() {
           </div>
         </div>
       )}
-
-      {/* Include/skip prompt */}
-      {confirmSection !== null && (() => {
-        const Icon = STEP_ICONS[confirmSection];
-        const copy = PROMPT_COPY[confirmSection];
-        return (
-          <Modal labelledBy="smt-prompt-title">
-            <div className="flex flex-col items-center gap-4 text-center">
-              <div className="flex h-[68px] w-[68px] items-center justify-center rounded-full" style={{ background: '#EEF1F8', color: '#1B3A9E' }}>
-                <Icon size={32} strokeWidth={1.8} aria-hidden="true" />
-              </div>
-              <h3 id="smt-prompt-title" className="modal-title">{copy.q}</h3>
-              <p className="modal-copy">
-                Add it now and we&apos;ll quote it together with the rest of your trip — or skip to the next step.
-              </p>
-              <div className="modal-actions">
-                <button onClick={() => skipSection(confirmSection)} className="brand-btn-secondary flex-1">
-                  No, skip
-                </button>
-                <button onClick={() => includeSection(confirmSection)} className="brand-btn-primary flex-1">
-                  {copy.yes}
-                </button>
-              </div>
-            </div>
-          </Modal>
-        );
-      })()}
 
       {/* Thank-you popup */}
       {done && (
@@ -787,5 +784,19 @@ function SiteHeader({ onHome }) {
         </div>
       </div>
     </header>
+  );
+}
+
+// Shown only on preview links, never on book.smtravel.co.za
+function DemoBanner() {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    setShow(window.location.hostname !== 'book.smtravel.co.za');
+  }, []);
+  if (!show) return null;
+  return (
+    <div className="px-4 py-2 text-center text-sm font-semibold" style={{ background: '#FDF3DA', color: '#8A5A00', borderBottom: '1px solid #E5A50A' }}>
+      DEMO PREVIEW — nothing you submit here is sent to Solid Matter Travel
+    </div>
   );
 }
