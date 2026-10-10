@@ -2,6 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Field from '@/components/Field';
+import Segmented from '@/components/Segmented';
+
+const TRIP_TYPES = [
+  { value: 'Return', label: 'Return' },
+  { value: 'One Way', label: 'One way' },
+];
 
 /**
  * Multi-city logic:
@@ -184,8 +190,6 @@ export default function Flights({ flights, setFlights }) {
 
   return (
     <>
-      <h2 className="text-lg font-semibold mb-3">Flights</h2>
-
       {/* Base leg */}
       <div className="grid md:grid-cols-2 gap-4">
         <Field label="From (city or airport)">
@@ -217,18 +221,12 @@ export default function Flights({ flights, setFlights }) {
 
         {/* Base Trip type (mandatory once date chosen) */}
         {f.departDate && (
-          <Field label="Trip type">
-            <select
-              className="brand-input w-full"
-              value={f.tripType || ''}
-              onChange={onBaseTripTypeChange}
-              required
-            >
-              <option value="">— Select —</option>
-              <option value="One Way">One Way</option>
-              <option value="Return">Return</option>
-            </select>
-          </Field>
+          <Segmented
+            label="Trip type"
+            value={f.tripType || ''}
+            options={TRIP_TYPES}
+            onChange={onBaseTripTypeChange}
+          />
         )}
 
         {/* Base Return date only when Return */}
@@ -256,9 +254,9 @@ export default function Flights({ flights, setFlights }) {
               disabled={!canAddMoreLegs}
               title={canAddMoreLegs ? 'Add another city' : 'Maximum 4 legs reached'}
             >
-              Add City
+              + Add another city
             </button>
-            <span className="text-sm opacity-75">
+            <span className="text-sm" style={{ color: '#4F596C' }}>
               You can add up to {4 - totalLegs} more leg(s).
             </span>
           </div>
@@ -267,7 +265,7 @@ export default function Flights({ flights, setFlights }) {
             <div
               key={i}
               className="grid md:grid-cols-2 gap-4 mb-3 p-4 rounded-xl border"
-              style={{ borderColor: 'var(--brand-navy-22)' }}
+              style={{ borderColor: '#E3E7EF', background: '#FAFBFD' }}
             >
               <Field label={`Leg ${i + 2} — From (city or airport)`}>
                 <EditableAirportField
@@ -297,18 +295,12 @@ export default function Flights({ flights, setFlights }) {
               </Field>
 
               {/* Trip type per segment (mandatory) */}
-              <Field label="Trip type">
-                <select
-                  className="brand-input w-full"
-                  value={seg.tripType || ''}
-                  onChange={onSegTripTypeChange(i)}
-                  required
-                >
-                  <option value="">— Select —</option>
-                  <option value="One Way">One Way</option>
-                  <option value="Return">Return</option>
-                </select>
-              </Field>
+              <Segmented
+                label="Trip type"
+                value={seg.tripType || ''}
+                options={TRIP_TYPES}
+                onChange={onSegTripTypeChange(i)}
+              />
 
               {/* Segment return date only when this segment is Return */}
               {seg.tripType === 'Return' && (

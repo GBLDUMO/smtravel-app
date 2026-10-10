@@ -2,10 +2,9 @@
 
 export default function Field({ label, children }) {
   return (
-    <label className="block text-sm font-medium text-gray-700">
+    <label className="flex flex-col gap-1.5 text-sm font-medium" style={{ color: '#2A3346' }}>
       {label}
-      <div className="mt-1">{children}</div>
+      <div>{children}</div>
     </label>
   );
 }
-

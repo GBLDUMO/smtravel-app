@@ -1,6 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { ArrowRight, BedDouble, Car, Check, MessageCircle, Plane, PlaneLanding } from 'lucide-react';
+
+const WHATSAPP_URL = 'https://wa.me/971582003251';
 
 // Components (no LogoHeader)
 import Modal from '@/components/Modal';
@@ -210,7 +213,7 @@ export default function Page() {
 
   useEffect(() => {
     if (process.env.NODE_ENV === 'production') return;
-    const root = document.querySelector('main');
+    const root = document.querySelector('[data-smt-root]');
     const ok = root && getComputedStyle(root).getPropertyValue('--brand-navy').trim() === '#0e1e4a';
     console.table([{ test: 'CSS var --brand-navy set', pass: !!ok }]);
   }, []);
@@ -218,242 +221,351 @@ export default function Page() {
   // --- NEW: helper to know if we're on the last step
   const isLast = tab === SECTIONS.length - 1;
 
+  // Display names (SECTIONS stays unchanged because it is sent to the back office)
+  const STEP_TITLES = ['Hotel booking', 'Flights', 'Car hire', 'Airport transfer'];
+  const STEP_SHORT = ['Hotel', 'Flights', 'Car hire', 'Airport transfer'];
+  const STEP_LEGENDS = ['Your stay', 'Your flight', 'Your vehicle', 'Your transfer'];
+  const STEP_ICONS = [BedDouble, Plane, Car, PlaneLanding];
+  const PROMPT_COPY = {
+    1: { q: 'Do you need flights?', yes: 'Yes, add flights' },
+    2: { q: 'Do you need car hire?', yes: 'Yes, add car hire' },
+    3: { q: 'Do you need an airport transfer?', yes: 'Yes, add a transfer' },
+  };
+  const firstName = (contact.fullName || '').trim().split(/\s+/)[0];
+
   return (
-    <main className="min-h-screen" style={{ ...themeVars, background: gradientBg }}>
-      {/* Landing – FULL-BLEED hero from very top */}
+    <div data-smt-root className="min-h-screen" style={{ ...themeVars, background: gradientBg }}>
+      <SiteHeader onHome={tab === null ? undefined : () => setTab(null)} />
+
+      {/* Landing */}
       {tab === null ? (
-        <section className="mt-0">
-          <div className="relative isolate min-h-screen w-screen left-1/2 right-1/2 -mx-[50vw] overflow-hidden bg-slate-900">
-            <picture>
-              <source srcSet="/images/call-center-hero.avif" type="image/avif" />
-              <img
-                src="/images/call-center-hero.jpg"
-                alt="Travel agents at work"
-                className="absolute inset-0 h-full w-full object-cover object-center brightness-115 contrast-110"
-                loading="eager"
-                fetchPriority="high"
-              />
-            </picture>
+        <section className="relative isolate flex items-center overflow-hidden" style={{ minHeight: 'calc(100vh - 71px)' }}>
+          <picture>
+            <source srcSet="/images/call-center-hero.avif" type="image/avif" />
+            <img
+              src="/images/call-center-hero.jpg"
+              alt=""
+              className="absolute inset-0 -z-20 h-full w-full object-cover"
+              style={{ objectPosition: 'center 30%' }}
+              loading="eager"
+              fetchPriority="high"
+            />
+          </picture>
+          <div className="absolute inset-0 -z-10" style={{ background: 'rgba(14,30,74,0.3)' }} />
 
-            <div className="absolute inset-0 bg-gradient-to-br from-slate-900/50 via-slate-900/30 to-slate-900/60" />
-
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-35">
-              <img
-                src="https://upload.wikimedia.org/wikipedia/commons/8/86/Africa_%28orthographic_projection%29.svg"
-                alt="Africa map overlay"
-                className="max-h-[65%] max-w-[65%] object-contain mix-blend-overlay"
-              />
+          <div className="mx-auto grid w-full max-w-6xl items-center gap-8 px-4 py-12 md:grid-cols-2 md:gap-10 md:px-8 md:py-16">
+            {/* Welcome card */}
+            <div className="flex flex-col gap-4 rounded-[22px] bg-white p-7 md:p-11" style={{ boxShadow: '0 24px 50px rgba(14,30,74,0.3)' }}>
+              <div className="flex flex-col">
+                <span className="font-serif text-2xl font-medium md:text-[30px]" style={{ color: '#2A3346' }}>Welcome to</span>
+                <h1 className="m-0 text-[40px] font-bold leading-[1.02] md:text-[58px]" style={{ color: '#0E1E4A' }}>
+                  Solid Matter Travel
+                </h1>
+              </div>
+              <div className="h-[3px] w-16 rounded" style={{ background: '#E5A50A' }} />
+              <p className="m-0 text-lg font-medium md:text-[19px]" style={{ color: '#1B2232' }}>
+                Manage all your bookings in one place.
+              </p>
+              <p className="m-0 text-[15px] leading-relaxed md:text-base" style={{ color: '#4F596C' }}>
+                <strong className="font-semibold" style={{ color: '#1B2232' }}>Solid Matter Travel</strong> is your single hub for
+                requests across hotels, flights, car hire and airport transfers. One smart form, auto-filled details, and
+                direct routing to our team for fast confirmations.
+              </p>
+              <div className="flex flex-wrap gap-x-5 gap-y-2 border-t pt-3.5 text-sm" style={{ borderColor: '#E3E7EF', color: '#4F596C' }}>
+                {['Africa specialists', 'Verified suppliers', 'South Africa & UAE'].map((t) => (
+                  <span key={t} className="inline-flex items-center gap-2">
+                    <Check size={16} strokeWidth={2.4} color="#1F7A45" aria-hidden="true" />
+                    {t}
+                  </span>
+                ))}
+              </div>
             </div>
 
-            <div className="relative z-10 max-w-5xl mx-auto px-4 md:px-8 py-16 md:py-24 grid items-start gap-10 md:grid-cols-2">
-              <div className="md:pt-10">
-                <div className="rounded-3xl bg-white/85 p-8 shadow-xl backdrop-blur">
-                  <h1 className="text-3xl sm:text-4xl leading-tight">
-                    <span className="block text-black">Welcome to</span>
-                    <span className="font-bold text-blue-900">Solid Matter Travel</span>
-                  </h1>
-                  <p className="mt-2 text-base text-black/80">Manage all your bookings in one place.</p>
-                  <p className="mt-4 text-sm text-black/80">
-                    <span className="font-semibold">Solid Matter Travel</span> is your single hub for
-                    requests across hotels, flights, car hire and airport transfers. One smart form,
-                    auto-filled details, and direct routing to our team for fast confirmations.
-                  </p>
-                </div>
-              </div>
-
-              <div className="md:pt-24">
-                <div className="mx-auto max-w-sm rounded-3xl bg-white/10 p-6 text-white backdrop-blur ring-1 ring-white/20">
-                  <h3 className="text-center text-3xl font-bold my-6">Choose a service</h3>
-                  <div className="flex flex-col gap-4">
-                    <button
-                      onClick={() => onLandingClick(0)}
-                      className="rounded-3xl px-6 py-4 bg-blue-700 text-white font-bold hover:bg-blue-800"
-                    >
-                      Hotel Booking
-                    </button>
-                    <button
-                      onClick={() => onLandingClick(1)}
-                      className="rounded-3xl px-6 py-4 bg-blue-700 text-white font-bold hover:bg-blue-800"
-                    >
-                      Flights
-                    </button>
-                    <button
-                      onClick={() => onLandingClick(2)}
-                      className="rounded-3xl px-6 py-4 bg-blue-700 text-white font-bold hover:bg-blue-800"
-                    >
-                      Car Hire
-                    </button>
-                    <button
-                      onClick={() => onLandingClick(3)}
-                      className="rounded-3xl px-6 py-4 bg-blue-700 text-white font-bold hover:bg-blue-800"
-                    >
-                      Airport Transfer
-                    </button>
-                  </div>
-                </div>
-              </div>
+            {/* Choose a service */}
+            <div
+              className="mx-auto flex w-full max-w-[420px] flex-col gap-3.5 rounded-[22px] p-6 md:p-8"
+              style={{ background: 'rgba(14,30,74,0.9)', border: '1px solid rgba(255,255,255,0.18)', boxShadow: '0 24px 50px rgba(14,30,74,0.3)' }}
+            >
+              <h2 className="mb-2 text-center text-[32px] font-semibold text-white md:text-[40px]">Choose a service</h2>
+              {SECTIONS.map((_, i) => {
+                const Icon = STEP_ICONS[i];
+                return (
+                  <button key={i} type="button" onClick={() => onLandingClick(i)} className="smt-service-btn">
+                    <Icon size={22} strokeWidth={1.9} aria-hidden="true" />
+                    <span className="flex-1 text-left">{['Hotel Booking', 'Flights', 'Car Hire', 'Airport Transfer'][i]}</span>
+                    <ArrowRight size={18} aria-hidden="true" className="smt-service-arrow" />
+                  </button>
+                );
+              })}
             </div>
           </div>
         </section>
       ) : (
-        // Process view (boxed)
-        <div className="max-w-5xl mx-auto p-4 md:p-6">
-          <section
-            className="rounded-2xl shadow-xl"
-            style={{ background: 'var(--brand-paper)', border: '1px solid var(--brand-navy-22)' }}
-          >
-            {/* Section header */}
-            <div
-              className="flex items-center justify-center px-4 md:px-6 py-3 border-b"
-              style={{ borderColor: 'var(--brand-navy-22)', background: 'var(--brand-navy-08)' }}
-            >
-              <h2 className="text-lg md:text-xl font-semibold text-center" style={{ color: 'var(--brand-navy)' }}>
-                {SECTIONS[tab]}
-              </h2>
-            </div>
-
-            {/* Shared contact row */}
-            <div className="px-4 md:px-6 py-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-              <Field label="Main Traveller Name">
-                <input
-                  className="brand-input w-full"
-                  value={contact.fullName}
-                  onChange={(e) => setContact({ ...contact, fullName: e.target.value })}
-                />
-              </Field>
-              <Field label="Email">
-                <input
-                  type="email"
-                  required
-                  className="brand-input w-full"
-                  value={contact.email}
-                  onChange={(e) => setContact({ ...contact, email: e.target.value })}
-                />
-              </Field>
-              <Field label="Phone (with country code)">
-                <input
-                  className="brand-input w-full"
-                  value={contact.phone}
-                  onChange={(e) => setContact({ ...contact, phone: e.target.value })}
-                />
-              </Field>
-            </div>
-
-            <div className="px-4 md:px-6 pb-6">
-              {tab === 0 && (
-                <HotelBooking
-                  hotel={hotel}
-                  setHotel={(h) => {
-                    if (allowAutoFill) {
-                      if (h.checkIn && !car.carPickupDate) setCar({ ...car, carPickupDate: h.checkIn });
-                      if (h.checkIn && !flights.departDate) setFlights({ ...flights, departDate: h.checkIn });
-                    }
-                    setHotel(h);
+        <div className="mx-auto max-w-6xl px-4 pb-16 pt-6 md:px-8 md:pt-8">
+          {/* Step bar */}
+          <ol aria-label="Booking steps" className="m-0 grid list-none grid-cols-4 gap-2 p-0 md:gap-3">
+            {SECTIONS.map((_, i) => {
+              const active = i === tab;
+              const skipped = enabled[i] === false;
+              const done = i < tab && !skipped;
+              return (
+                <li
+                  key={i}
+                  aria-current={active ? 'step' : undefined}
+                  className="flex min-w-0 flex-col items-center gap-1.5 rounded-xl px-2 py-2.5 text-center md:flex-row md:gap-3 md:px-4 md:py-3.5 md:text-left"
+                  style={{
+                    background: active ? '#0E1E4A' : '#FFFFFF',
+                    border: active ? '1px solid #0E1E4A' : '1px solid #E3E7EF',
+                    color: active ? '#FFFFFF' : done ? '#0E1E4A' : '#4F596C',
                   }}
-                />
-              )}
-
-              {tab === 1 && enabled[1] !== false && (
-                <Flights
-                  flights={flights}
-                  setFlights={(nf) => {
-                    if (allowAutoFill) {
-                      const nextCar = { ...car };
-                      if (!carPickupTouched && nf.to) {
-                        nextCar.carPickup = nf.to;
-                        if (!carReturnTouched) nextCar.carReturn = nf.to;
-                      }
-                      setCar(nextCar);
+                >
+                  <span
+                    className="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-full text-sm font-semibold"
+                    style={
+                      active
+                        ? { background: '#E5A50A', color: '#0E1E4A' }
+                        : done
+                        ? { background: '#1F7A45', color: '#FFFFFF' }
+                        : { border: '1px solid #CDD4E1' }
                     }
-                    setFlights(nf);
-                  }}
-                />
-              )}
+                  >
+                    {done ? <Check size={16} strokeWidth={3} aria-hidden="true" /> : i + 1}
+                  </span>
+                  <span className={`min-w-0 text-xs md:text-[15px] ${active ? 'font-semibold' : 'font-medium'}`}>
+                    {STEP_SHORT[i]}
+                    {skipped && <span className="block text-[11px] font-normal md:inline"> · skipped</span>}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
 
-              {tab === 2 && enabled[2] !== false && (
-                <CarHire
-                  car={car}
-                  setCar={(nc) => {
-                    if (nc.carPickup !== car.carPickup && !carPickupTouched) setCarPickupTouched(true);
-                    if (nc.carReturn !== car.carReturn && !carReturnTouched) setCarReturnTouched(true);
-                    if (!carReturnTouched && nc.carPickup !== car.carPickup) {
-                      nc = { ...nc, carReturn: nc.carPickup };
-                    }
-                    setCar(nc);
-                  }}
-                />
-              )}
+          <div className="mt-6 flex flex-wrap items-start gap-7">
+            {/* Form card */}
+            <section className="min-w-0 overflow-hidden rounded-[18px] bg-white" style={{ flex: '999 1 640px', border: '1px solid #E3E7EF' }}>
+              <div className="flex flex-col gap-1.5 border-b px-5 pb-5 pt-6 md:px-8 md:pt-7" style={{ borderColor: '#E3E7EF' }}>
+                <div className="text-[13px] font-semibold tracking-[0.14em]" style={{ color: '#8A5A00' }}>
+                  STEP {tab + 1} OF {SECTIONS.length}{isLast ? ' · LAST STEP' : ''}
+                </div>
+                <h1 className="m-0 text-[34px] font-semibold md:text-[40px]" style={{ color: '#0E1E4A' }}>
+                  {STEP_TITLES[tab]}
+                </h1>
+              </div>
 
-              {tab === 3 && enabled[3] !== false && (
-                <AirportTransfer
-                  transfer={transfer}
-                  flightsTo={allowAutoFill ? flights.to : ''}
-                  setTransfer={setTransfer}
-                />
-              )}
+              <div className="flex flex-col gap-7 px-5 py-6 md:px-8 md:py-7">
+                {/* Shared contact row */}
+                <fieldset className="m-0 flex flex-col gap-4 border-0 p-0">
+                  <legend className="mb-4 p-0 text-[17px] font-semibold" style={{ color: '#0E1E4A' }}>Lead traveller</legend>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <Field label="Full name">
+                      <input
+                        className="brand-input w-full"
+                        autoComplete="name"
+                        value={contact.fullName}
+                        onChange={(e) => setContact({ ...contact, fullName: e.target.value })}
+                      />
+                    </Field>
+                    <Field label="Email">
+                      <input
+                        type="email"
+                        required
+                        autoComplete="email"
+                        className="brand-input w-full"
+                        value={contact.email}
+                        onChange={(e) => setContact({ ...contact, email: e.target.value })}
+                      />
+                    </Field>
+                    <Field label="Phone (with country code)">
+                      <input
+                        type="tel"
+                        autoComplete="tel"
+                        className="brand-input w-full"
+                        value={contact.phone}
+                        onChange={(e) => setContact({ ...contact, phone: e.target.value })}
+                      />
+                    </Field>
+                  </div>
+                </fieldset>
+
+                <div className="h-px" style={{ background: '#E3E7EF' }} />
+
+                <fieldset className="m-0 border-0 p-0">
+                  <legend className="mb-4 p-0 text-[17px] font-semibold" style={{ color: '#0E1E4A' }}>{STEP_LEGENDS[tab]}</legend>
+
+                  {tab === 0 && (
+                    <HotelBooking
+                      hotel={hotel}
+                      setHotel={(h) => {
+                        if (allowAutoFill) {
+                          if (h.checkIn && !car.carPickupDate) setCar({ ...car, carPickupDate: h.checkIn });
+                          if (h.checkIn && !flights.departDate) setFlights({ ...flights, departDate: h.checkIn });
+                        }
+                        setHotel(h);
+                      }}
+                    />
+                  )}
+
+                  {tab === 1 && enabled[1] !== false && (
+                    <Flights
+                      flights={flights}
+                      setFlights={(nf) => {
+                        if (allowAutoFill) {
+                          const nextCar = { ...car };
+                          if (!carPickupTouched && nf.to) {
+                            nextCar.carPickup = nf.to;
+                            if (!carReturnTouched) nextCar.carReturn = nf.to;
+                          }
+                          setCar(nextCar);
+                        }
+                        setFlights(nf);
+                      }}
+                    />
+                  )}
+
+                  {tab === 2 && enabled[2] !== false && (
+                    <CarHire
+                      car={car}
+                      setCar={(nc) => {
+                        if (nc.carPickup !== car.carPickup && !carPickupTouched) setCarPickupTouched(true);
+                        if (nc.carReturn !== car.carReturn && !carReturnTouched) setCarReturnTouched(true);
+                        if (!carReturnTouched && nc.carPickup !== car.carPickup) {
+                          nc = { ...nc, carReturn: nc.carPickup };
+                        }
+                        setCar(nc);
+                      }}
+                    />
+                  )}
+
+                  {tab === 3 && enabled[3] !== false && (
+                    <AirportTransfer
+                      transfer={transfer}
+                      flightsTo={allowAutoFill ? flights.to : ''}
+                      setTransfer={setTransfer}
+                    />
+                  )}
+                </fieldset>
+              </div>
 
               {/* Buttons */}
-              <div className="mt-6 flex flex-wrap gap-2 items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t px-5 py-5 md:px-8" style={{ borderColor: '#E3E7EF', background: '#FAFBFD' }}>
                 <button
+                  type="button"
                   onClick={() => {
-                    if (tab !== null) setTab(Math.max(0, tab - 1));
+                    if (tab === 0) setTab(null);
+                    else if (tab !== null) setTab(Math.max(0, tab - 1));
                   }}
-                  className="brand-btn-secondary"
-                  disabled={tab === 0}
+                  className="smt-btn-text"
                 >
-                  Back
+                  ← {tab === 0 ? 'Back' : `Back to ${STEP_SHORT[tab - 1].toLowerCase()}`}
                 </button>
 
-                <div className="ml-auto flex gap-2">
-                  {/* Complete: blue on last step; secondary elsewhere */}
-                  <button
-                    onClick={completeNow}
-                    disabled={sending}
-                    className={isLast ? 'brand-btn-primary' : 'brand-btn-secondary'}
-                  >
-                    {sending ? 'Working…' : 'Complete'}
-                  </button>
-
-                  {/* Next only when not on last step */}
-                  {!isLast && (
-                    <button onClick={goNext} className="brand-btn-primary">
-                      Next: {SECTIONS[findNextIndex(tab)]}
+                <div className="ml-auto flex flex-wrap gap-3">
+                  {isLast ? (
+                    <button onClick={completeNow} disabled={sending} className="brand-btn-gold">
+                      {sending ? 'Sending…' : 'Submit booking request'}
                     </button>
+                  ) : (
+                    <>
+                      <button onClick={completeNow} disabled={sending} className="brand-btn-secondary">
+                        {sending ? 'Sending…' : tab === 0 ? 'Submit hotel only' : 'Submit request now'}
+                      </button>
+                      <button onClick={goNext} className="brand-btn-primary">
+                        Continue to {STEP_SHORT[findNextIndex(tab)].toLowerCase()} →
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
-            </div>
-          </section>
+            </section>
+
+            {/* Side panel */}
+            <aside className="flex flex-col gap-4" style={{ flex: '1 1 300px' }}>
+              <div className="flex flex-col gap-4 rounded-[18px] bg-white p-6" style={{ border: '1px solid #E3E7EF' }}>
+                <div className="text-[17px] font-semibold" style={{ color: '#0E1E4A' }}>What happens next</div>
+                {[
+                  'Add the services you need, or submit after any step.',
+                  'Our team checks availability with our suppliers.',
+                  'You receive one quote by email.',
+                ].map((t, i) => (
+                  <div key={i} className="flex gap-3 text-sm leading-normal" style={{ color: '#4F596C' }}>
+                    <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full text-[13px] font-semibold" style={{ background: '#EEF1F8', color: '#1B3A9E' }}>
+                      {i + 1}
+                    </span>
+                    {t}
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-col gap-3 rounded-[18px] p-6 text-white" style={{ background: '#0E1E4A' }}>
+                <div className="font-serif text-[26px] font-semibold">Rather chat?</div>
+                <div className="text-sm leading-normal" style={{ color: '#D5DBEA' }}>
+                  Send the trip details on WhatsApp and we&apos;ll take it from there.
+                </div>
+                <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="brand-btn-gold text-center no-underline">
+                  Open WhatsApp
+                </a>
+              </div>
+              <p className="m-0 px-1 text-[13px] leading-normal" style={{ color: '#4F596C' }}>
+                Your details are used only to quote and book this trip, in line with POPIA.
+              </p>
+            </aside>
+          </div>
         </div>
       )}
 
       {/* Include/skip prompt */}
-      {confirmSection !== null && (
-        <Modal>
-          <h3 className="modal-title">{`Do you require a ${SECTIONS[confirmSection]}?`}</h3>
-          <p className="modal-copy">Choose Yes to complete it now, or No to skip to the next step.</p>
-          <div className="modal-actions">
-            <button onClick={() => skipSection(confirmSection)} className="brand-btn-secondary">
-              No
-            </button>
-            <button onClick={() => includeSection(confirmSection)} className="brand-btn-primary">
-              Yes
-            </button>
-          </div>
-        </Modal>
-      )}
+      {confirmSection !== null && (() => {
+        const Icon = STEP_ICONS[confirmSection];
+        const copy = PROMPT_COPY[confirmSection];
+        return (
+          <Modal labelledBy="smt-prompt-title">
+            <div className="flex flex-col items-center gap-4 text-center">
+              <div className="flex h-[68px] w-[68px] items-center justify-center rounded-full" style={{ background: '#EEF1F8', color: '#1B3A9E' }}>
+                <Icon size={32} strokeWidth={1.8} aria-hidden="true" />
+              </div>
+              <h3 id="smt-prompt-title" className="modal-title">{copy.q}</h3>
+              <p className="modal-copy">
+                Add it now and we&apos;ll quote it together with the rest of your trip — or skip to the next step.
+              </p>
+              <div className="modal-actions">
+                <button onClick={() => skipSection(confirmSection)} className="brand-btn-secondary flex-1">
+                  No, skip
+                </button>
+                <button onClick={() => includeSection(confirmSection)} className="brand-btn-primary flex-1">
+                  {copy.yes}
+                </button>
+              </div>
+            </div>
+          </Modal>
+        );
+      })()}
 
-      {/* Centered THANK YOU POPUP */}
+      {/* Thank-you popup */}
       {done && (
-        <Modal>
-          <div className="text-center">
-            <h3 className="modal-title">Thank you for your request!</h3>
+        <Modal labelledBy="smt-thanks-title">
+          <div className="flex flex-col items-center gap-4 text-center">
+            <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full" style={{ background: '#E5A50A', color: '#0E1E4A' }}>
+              <Check size={34} strokeWidth={2.6} aria-hidden="true" />
+            </div>
+            <h3 id="smt-thanks-title" className="modal-title">Request received</h3>
             <p className="modal-copy">
-              Our team will contact you shortly. You will receive a confirmation email for your booking.
+              Thank you{firstName ? `, ${firstName}` : ''}. Our team is preparing your quote
+              {contact.email ? (
+                <>
+                  {' '}and will email it to <strong style={{ color: '#1B2232' }}>{contact.email}</strong>.
+                </>
+              ) : (
+                '.'
+              )}
             </p>
+            <div className="rounded-xl px-5 py-3 text-sm" style={{ background: '#F5F7FB', border: '1px solid #E3E7EF', color: '#4F596C' }}>
+              You will receive a confirmation email for your booking.
+            </div>
             <div className="modal-actions">
-              <button onClick={() => setDone(false)} className="brand-btn-primary">
-                Close
+              <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="brand-btn-whatsapp flex-1">
+                <MessageCircle size={18} aria-hidden="true" /> WhatsApp us
+              </a>
+              <button onClick={() => setDone(false)} className="brand-btn-primary flex-1">
+                Done
               </button>
             </div>
           </div>
@@ -481,86 +593,199 @@ export default function Page() {
           border-color: var(--brand-navy);
           box-shadow: 0 0 0 4px var(--brand-amber-33);
         }
-        .brand-btn-primary {
+        .brand-btn-primary,
+        .brand-btn-secondary,
+        .brand-btn-gold,
+        .brand-btn-whatsapp {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
           padding: 0.75rem 1.5rem;
           min-height: 48px;
           border-radius: 9999px;
-          color: white;
           font-weight: 600;
+          font-size: 15px;
+          text-decoration: none;
+          transition: transform 0.06s, box-shadow 0.2s, background 0.2s, border-color 0.2s;
+        }
+        .brand-btn-primary {
+          color: #fff;
           background: var(--brand-navy);
           border: 1px solid var(--brand-navy);
           box-shadow: 0 8px 16px var(--brand-navy-22);
-          transition: transform 0.06s, box-shadow 0.2s, filter 0.2s, background 0.2s;
         }
         .brand-btn-primary:hover {
           background: #1a2d66;
         }
-        .brand-btn-primary:active {
-          transform: translateY(1px);
-        }
-        .brand-btn-primary:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
         .brand-btn-secondary {
-          padding: 0.75rem 1.5rem;
-          min-height: 48px;
-          border-radius: 9999px;
-          font-weight: 600;
           background: #fff;
           color: var(--brand-navy);
           border: 1px solid var(--brand-navy);
-          transition: background 0.2s, border-color 0.2s, transform 0.06s;
         }
         .brand-btn-secondary:hover {
           background: var(--brand-navy-0d);
         }
-        .brand-btn-secondary:active {
+        .brand-btn-gold {
+          background: #e5a50a;
+          color: #0e1e4a;
+          border: 1px solid #e5a50a;
+        }
+        .brand-btn-gold:hover {
+          background: #f2b52a;
+          color: #0e1e4a;
+        }
+        .brand-btn-whatsapp {
+          background: #fff;
+          color: #1f7a45;
+          border: 1px solid #1f7a45;
+        }
+        .brand-btn-whatsapp:hover {
+          background: #1f7a4510;
+          color: #1f7a45;
+        }
+        .brand-btn-primary:active,
+        .brand-btn-secondary:active,
+        .brand-btn-gold:active {
+          transform: translateY(1px);
+        }
+        .brand-btn-primary:disabled,
+        .brand-btn-secondary:disabled,
+        .brand-btn-gold:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+        .smt-btn-text {
+          min-height: 44px;
+          padding: 0.75rem 0.375rem;
+          color: #2a3346;
+          font-weight: 500;
+          background: none;
+          border: 0;
+        }
+        .smt-btn-text:hover {
+          color: var(--brand-navy);
+        }
+        .smt-service-btn {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          height: 62px;
+          padding: 0 1.25rem;
+          border-radius: 14px;
+          background: #fff;
+          color: #0e1e4a;
+          font-weight: 600;
+          font-size: 17px;
+          border: 0;
+          transition: background 0.2s, transform 0.06s;
+        }
+        .smt-service-btn svg {
+          color: #1b3a9e;
+        }
+        .smt-service-btn .smt-service-arrow {
+          color: #8a5a00;
+          transition: transform 0.2s;
+        }
+        .smt-service-btn:hover {
+          background: #e5a50a;
+        }
+        .smt-service-btn:hover svg,
+        .smt-service-btn:hover .smt-service-arrow {
+          color: #0e1e4a;
+        }
+        .smt-service-btn:hover .smt-service-arrow {
+          transform: translateX(3px);
+        }
+        .smt-service-btn:active {
           transform: translateY(1px);
         }
         .modal-backdrop {
           position: fixed;
           inset: 0;
-          background: rgba(0, 0, 0, 0.5);
+          background: rgba(14, 30, 74, 0.6);
           display: flex;
           align-items: center;
           justify-content: center;
           min-height: 100vh;
+          padding: 1rem;
           z-index: 100;
-          transition: opacity 0.3s ease-in-out;
         }
         .modal-card {
-          width: min(90vw, 480px);
-          max-height: 80vh;
+          width: min(100%, 540px);
+          max-height: 90vh;
           overflow-y: auto;
           background: var(--brand-paper);
-          border: 1px solid var(--brand-navy-22);
-          border-radius: 1rem;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-          padding: 1.5rem;
-          transform: translateY(0);
-          transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+          border-radius: 22px;
+          box-shadow: 0 30px 60px rgba(14, 30, 74, 0.35);
+          padding: 2.25rem 2rem;
         }
         .modal-title {
-          font-weight: 700;
+          margin: 0;
+          font-weight: 600;
           color: var(--brand-navy);
-          margin-bottom: 0.75rem;
-          font-size: 1.25rem;
+          font-size: 2.25rem;
+          line-height: 1.1;
           text-align: center;
         }
         .modal-copy {
-          color: var(--brand-ink);
-          opacity: 0.8;
+          margin: 0;
+          color: #4f596c;
           font-size: 1rem;
-          margin-bottom: 1rem;
-          text-align: center.
+          line-height: 1.6;
+          text-align: center;
+          max-width: 420px;
         }
         .modal-actions {
           display: flex;
-          gap: 0.5rem;
+          flex-wrap: wrap;
+          gap: 0.75rem;
           justify-content: center;
+          width: 100%;
+          margin-top: 0.5rem;
         }
       `}</style>
-    </main>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Header shown on every screen: logo, phone, email, WhatsApp
+// ---------------------------------------------------------------------------
+function SiteHeader({ onHome }) {
+  const logo = (
+    <img src="/smt-logo.png" alt="Solid Matter Travel" className="block h-10 w-auto md:h-12" width={145} height={48} />
+  );
+  return (
+    <header className="bg-white" style={{ borderBottom: '3px solid #E5A50A' }}>
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-2.5 md:px-8">
+        {onHome ? (
+          <button type="button" onClick={onHome} aria-label="Solid Matter Travel — back to start" className="border-0 bg-transparent p-0">
+            {logo}
+          </button>
+        ) : (
+          logo
+        )}
+        <div className="flex items-center gap-4 text-sm md:gap-5" style={{ color: '#4F596C' }}>
+          <a href="tel:+27104460125" className="hidden sm:inline" style={{ color: '#4F596C' }}>
+            +27 10 446 0125
+          </a>
+          <a href="mailto:Dumisani@smtravel.co.za" className="hidden lg:inline" style={{ color: '#4F596C' }}>
+            Dumisani@smtravel.co.za
+          </a>
+          <a
+            href={WHATSAPP_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Chat on WhatsApp"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 font-medium text-white"
+            style={{ background: '#1F7A45' }}
+          >
+            <MessageCircle size={16} aria-hidden="true" />
+            <span className="hidden sm:inline">WhatsApp</span>
+          </a>
+        </div>
+      </div>
+    </header>
   );
 }

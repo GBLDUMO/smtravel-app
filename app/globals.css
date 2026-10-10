@@ -41,12 +41,15 @@ body {
   font-family: var(--font-jost), system-ui, sans-serif;
 }
 
-/* Headings use the brand serif */
-h1, h2, h3 {
-  font-family: var(--font-cormorant), Georgia, serif;
-  letter-spacing: -0.005em;
-}
+/* Base styles live in the base layer so Tailwind utilities can override them */
+@layer base {
+  /* Headings use the brand serif */
+  h1, h2, h3 {
+    font-family: var(--font-cormorant), Georgia, serif;
+    letter-spacing: -0.005em;
+  }
 
-a {
-  color: var(--smt-blue);
+  a {
+    color: var(--smt-blue);
+  }
 }

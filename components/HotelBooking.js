@@ -2,6 +2,12 @@
 
 import Field from '@/components/Field';
 
+const optional = (text) => (
+  <span>
+    {text} <span className="font-normal" style={{ color: '#6B7486' }}>(optional)</span>
+  </span>
+);
+
 export default function HotelBooking({ hotel, setHotel }) {
   const c = hotel || {};
   const set = (k) => (e) => setHotel({ ...c, [k]: e.target.value });
@@ -29,25 +35,18 @@ export default function HotelBooking({ hotel, setHotel }) {
   };
 
   return (
-    <>
-      <h2 className="text-lg font-semibold mb-3">Hotel Booking</h2>
+    <div className="flex flex-col gap-4">
+      <Field label="Travelling to">
+        <input
+          className="brand-input w-full"
+          value={c.destCity || ''}
+          onChange={set('destCity')}
+          placeholder="e.g. Cape Town"
+          maxLength={60}
+        />
+      </Field>
 
-      <div className="grid md:grid-cols-2 gap-4">
-        {/* Make Destination span both columns so the next row lines up */}
-        <div className="md:col-span-2">
-          <Field label="Traveling To:">
-            <input
-              className="brand-input"
-              value={c.destCity || ''}
-              onChange={set('destCity')}
-              placeholder="e.g. Cape Town"
-              maxLength={25}   // user can’t type more than 25 characters
-              size={25}        // box width ~ 25 characters
-            />
-          </Field>
-        </div>
-
-        {/* Row: Check-in | Check-out */}
+      <div className="grid gap-4 sm:grid-cols-3">
         <Field label="Check-in date">
           <input
             type="date"
@@ -66,8 +65,20 @@ export default function HotelBooking({ hotel, setHotel }) {
           />
         </Field>
 
-        {/* Row: No of Traveler(s) | No of Rooms */}
-        <Field label="No of Traveler(s)">
+        {/* Nights (calculated from the dates) */}
+        <Field label="Nights">
+          <input
+            type="number"
+            className="brand-input w-full"
+            value={c.nights ?? 0}
+            readOnly
+            style={{ background: '#F5F7FB' }}
+          />
+        </Field>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Number of travellers">
           <select
             className="brand-input w-full"
             value={c.adults ?? ''}
@@ -75,13 +86,13 @@ export default function HotelBooking({ hotel, setHotel }) {
             required
           >
             <option value="">— Select —</option>
-            {Array.from({ length: 9 }, (_, i) => (
-              <option key={i} value={i}>{i}</option>
+            {Array.from({ length: 8 }, (_, i) => (
+              <option key={i + 1} value={i + 1}>{i + 1}</option>
             ))}
           </select>
         </Field>
 
-        <Field label="No of Rooms">
+        <Field label="Number of rooms">
           <select
             className="brand-input w-full"
             value={c.rooms ?? ''}
@@ -89,26 +100,14 @@ export default function HotelBooking({ hotel, setHotel }) {
             required
           >
             <option value="">— Select —</option>
-            <option value="0">0</option>
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <option key={n} value={String(n)}>{n}</option>
+            ))}
           </select>
         </Field>
+      </div>
 
-        {/* Nights (auto) */}
-        <Field label="Nights">
-          <input
-            type="number"
-            className="brand-input w-full"
-            value={c.nights ?? 0}
-            readOnly
-          />
-        </Field>
-
-        {/* Hotel category */}
+      <div className="grid gap-4 sm:grid-cols-3">
         <Field label="Hotel category">
           <select
             className="brand-input w-full"
@@ -123,7 +122,6 @@ export default function HotelBooking({ hotel, setHotel }) {
           </select>
         </Field>
 
-        {/* Meal type (clean label + limited options) */}
         <Field label="Meal type">
           <select
             className="brand-input w-full"
@@ -139,7 +137,6 @@ export default function HotelBooking({ hotel, setHotel }) {
           </select>
         </Field>
 
-        {/* Room type */}
         <Field label="Room type">
           <select
             className="brand-input w-full"
@@ -153,30 +150,26 @@ export default function HotelBooking({ hotel, setHotel }) {
             <option>Suite</option>
           </select>
         </Field>
-
-        {/* Specific hotel */}
-        <Field label="Specific hotel (optional)">
-          <input
-            className="brand-input w-full"
-            value={c.specificHotel || ''}
-            onChange={set('specificHotel')}
-            placeholder="If you have a preference"
-          />
-        </Field>
-
-        {/* Notes */}
-        <div className="md:col-span-2">
-          <Field label="Notes (optional)">
-            <textarea
-              className="brand-input w-full"
-              rows={3}
-              value={c.notes || ''}
-              onChange={set('notes')}
-              placeholder="Any special requests"
-            />
-          </Field>
-        </div>
       </div>
-    </>
+
+      <Field label={optional('Specific hotel')}>
+        <input
+          className="brand-input w-full"
+          value={c.specificHotel || ''}
+          onChange={set('specificHotel')}
+          placeholder="If you have a preference"
+        />
+      </Field>
+
+      <Field label={optional('Notes')}>
+        <textarea
+          className="brand-input w-full"
+          rows={3}
+          value={c.notes || ''}
+          onChange={set('notes')}
+          placeholder="Any special requests"
+        />
+      </Field>
+    </div>
   );
 }

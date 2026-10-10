@@ -1,77 +1,71 @@
-  'use client';
+'use client';
 
-  import Field from '@/components/Field';
+import Field from '@/components/Field';
+import Segmented from '@/components/Segmented';
 
-  export default function CarHire({ car, setCar }) {
-    const c = car || {};
-    const set = (k) => (e) => setCar({ ...c, [k]: e.target.value });
+const CAR_TYPES = ['Small', 'Mid', 'Luxury', 'Large'].map((v) => ({ value: v, label: v }));
 
-    return (
-      <>
-        <h2 className="text-lg font-semibold mb-3">Car Hire</h2>
-        <div className="grid md:grid-cols-2 gap-4">
-          <Field label="Pickup location">
-            <input
-              className="brand-input w-full"
-              value={c.carPickup || ''}
-              onChange={set('carPickup')}
-              placeholder="Defaults from Flights → To"
-            />
-          </Field>
+export default function CarHire({ car, setCar }) {
+  const c = car || {};
+  const set = (k) => (e) => setCar({ ...c, [k]: e.target.value });
 
-          <Field label="Return location">
-            <input
-              className="brand-input w-full"
-              value={c.carReturn || ''}
-              onChange={set('carReturn')}
-              placeholder="Mirrors Pickup (editable)"
-            />
-          </Field>
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="grid gap-4 md:grid-cols-2">
+        <Field label="Pickup location">
+          <input
+            className="brand-input w-full"
+            value={c.carPickup || ''}
+            onChange={set('carPickup')}
+            placeholder="Defaults to your flight destination"
+          />
+        </Field>
 
-          <Field label="Pickup date">
-            <input
-              type="date"
-              className="brand-input w-full"
-              value={c.carPickupDate || ''}
-              onChange={set('carPickupDate')}
-            />
-          </Field>
+        <Field label="Return location">
+          <input
+            className="brand-input w-full"
+            value={c.carReturn || ''}
+            onChange={set('carReturn')}
+            placeholder="Same as pickup (editable)"
+          />
+        </Field>
 
-          <Field label="Return date">
-            <input
-              type="date"
-              className="brand-input w-full"
-              value={c.carReturnDate || ''}
-              onChange={set('carReturnDate')}
-            />
-          </Field>
+        <Field label="Pickup date">
+          <input
+            type="date"
+            className="brand-input w-full"
+            value={c.carPickupDate || ''}
+            onChange={set('carPickupDate')}
+          />
+        </Field>
 
-          {/* Same row: Car type + Notes */}
-          <Field label="Car type">
-            <select
-              className="brand-input w-full"
-              value={c.carType || ''}
-              onChange={set('carType')}
-              required
-            >
-              <option value="">— Select —</option>
-              <option>Small</option>
-              <option>Mid</option>
-              <option>Luxury</option>
-              <option>Large</option>
-            </select>
-          </Field>
+        <Field label="Return date">
+          <input
+            type="date"
+            className="brand-input w-full"
+            value={c.carReturnDate || ''}
+            onChange={set('carReturnDate')}
+          />
+        </Field>
+      </div>
 
-          <Field label="Notes (optional)">
-            <textarea
-              className="brand-input w-full"
-              rows={1}
-              value={c.carNotes || ''}
-              onChange={set('carNotes')}
-              placeholder="Any special requests"
-            />
-          </Field>
-        </div>
-      </>
-    );
-  }
+      <Segmented
+        label="Car type"
+        variant="tiles"
+        value={c.carType || ''}
+        options={CAR_TYPES}
+        onChange={set('carType')}
+      />
+
+      <Field label={<span>Notes <span className="font-normal" style={{ color: '#6B7486' }}>(optional)</span></span>}>
+        <textarea
+          className="brand-input w-full"
+          rows={3}
+          value={c.carNotes || ''}
+          onChange={set('carNotes')}
+          placeholder="Any special requests"
+        />
+      </Field>
+    </div>
+  );
+}
