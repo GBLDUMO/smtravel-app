@@ -99,6 +99,8 @@ export default function Page() {
   // UX
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false); // drives the popup
+  const [sendFailed, setSendFailed] = useState(false); // drives the "could not send" popup
+  const [bookingRef, setBookingRef] = useState('');
 
   // car “touched” flags for mirroring
   const [carPickupTouched, setCarPickupTouched] = useState(false);
@@ -163,21 +165,65 @@ export default function Page() {
     else setTab(order[idx - 1]);
   }
 
+  // Sends the request. Returns { ok, bookingId }. ok is false only when the request did not
+  // reach the server or the server answered with an error status.
   async function post(payload) {
     if (!isLiveSite()) {
       // eslint-disable-next-line no-console
       console.info('[demo] request not sent', payload);
-      return;
+      // Preview only: add ?demo=fail to the address to see the "could not send" screen
+      const simulateFail = new URLSearchParams(window.location.search).get('demo') === 'fail';
+      return simulateFail ? { ok: false } : { ok: true, bookingId: 'SMT-QU-DEMO' };
     }
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timer = controller ? setTimeout(() => controller.abort(), 25000) : null;
     try {
-      await fetch('/api/submit', {
+      const res = await fetch('/api/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
+        signal: controller ? controller.signal : undefined,
       });
+      let data = null;
+      try {
+        data = await res.json();
+      } catch {
+        data = null;
+      }
+      return { ok: res.ok, bookingId: data?.bookingId || '' };
     } catch {
-      // ignore network errors for MVP
+      return { ok: false };
+    } finally {
+      if (timer) clearTimeout(timer);
     }
+  }
+
+  const hasValidEmail = () => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((contact.email || '').trim());
+
+  // Plain-text summary used for the WhatsApp / email fallback when sending fails
+  function requestSummary() {
+    const lines = ['Booking request (website could not send it)'];
+    lines.push(`Name: ${contact.fullName || '-'}`);
+    lines.push(`Email: ${contact.email || '-'}`);
+    if (contact.phone) lines.push(`Phone: ${contact.phone}`);
+    if (order.includes(0)) {
+      lines.push('', 'HOTEL', `Destination: ${hotel.destCity}`, `Check-in: ${hotel.checkIn}  Check-out: ${hotel.checkOut} (${hotel.nights} nights)`);
+      lines.push(`Travellers: ${hotel.adults}  Rooms: ${hotel.rooms || '-'}  Category: ${hotel.hotelCategory || '-'}  Meals: ${hotel.mealType || '-'}  Room: ${hotel.roomType || '-'}`);
+      if (hotel.specificHotel) lines.push(`Preferred hotel: ${hotel.specificHotel}`);
+      if (hotel.notes) lines.push(`Notes: ${hotel.notes}`);
+    }
+    if (order.includes(1)) {
+      lines.push('', 'FLIGHTS', `${flights.from} to ${flights.to} (${flights.tripType || '-'})`, `Depart: ${flights.departDate || '-'}${flights.returnDate ? `  Return: ${flights.returnDate}` : ''}`);
+      (flights.segments || []).forEach((sg, k) => lines.push(`Leg ${k + 2}: ${sg.from} to ${sg.to} on ${sg.departDate || '-'}`));
+    }
+    if (order.includes(2)) {
+      lines.push('', 'CAR HIRE', `Pickup: ${car.carPickup} on ${car.carPickupDate || '-'}`, `Return: ${car.carReturn} on ${car.carReturnDate || '-'}`, `Car type: ${car.carType || '-'}`);
+      if (car.carNotes) lines.push(`Notes: ${car.carNotes}`);
+    }
+    if (order.includes(3)) {
+      lines.push('', 'AIRPORT TRANSFER', `From: ${transfer.tFrom || flights.to || '-'}  To: ${transfer.tTo}`, `Date: ${transfer.tDate}  Type: ${transfer.tType || 'One way'}`);
+    }
+    return lines.join('\n');
   }
 
   async function completeNow() {
@@ -188,10 +234,17 @@ export default function Page() {
       setStepError(MISSING_HINT[incomplete]);
       return;
     }
+    // Name and a valid email are needed: the server rejects requests without an email
+    if (!contact.fullName.trim() || !hasValidEmail()) {
+      setStepError('Please add your full name and a valid email address at the top of the form so we can send your quote.');
+      if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    setStepError('');
     setSending(true);
     // Services not added are sent blank, so the back office only sees what was requested
     const has = (i) => order.includes(i);
-    await post({
+    const result = await post({
       contact,
       hotel: has(0) ? hotel : initialHotel(),
       flights: has(1) ? flights : initialFlights(),
@@ -205,7 +258,13 @@ export default function Page() {
       endedAt: SECTIONS[tab],
     });
     setSending(false);
-    thankAndReset(5000);
+    if (!result.ok) {
+      // Keep everything the traveller typed; offer retry and WhatsApp / email instead
+      setSendFailed(true);
+      return;
+    }
+    setBookingRef(result.bookingId || '');
+    thankAndReset(8000);
   }
   // ----- end fixed area
 
@@ -220,6 +279,8 @@ export default function Page() {
     setCarReturnTouched(false);
     setOrder([]);
     setStepError('');
+    setSendFailed(false);
+    setBookingRef('');
     setTab(null);
     setAllowAutoFill(true);
   }
@@ -536,6 +597,49 @@ export default function Page() {
         </div>
       )}
 
+      {/* Could-not-send popup: nothing typed is lost */}
+      {sendFailed && (
+        <Modal labelledBy="smt-failed-title">
+          <div className="flex flex-col items-center gap-4 text-center">
+            <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full text-[34px] font-bold" style={{ background: '#FDECEA', color: '#B42318' }} aria-hidden="true">
+              !
+            </div>
+            <h3 id="smt-failed-title" className="modal-title">We couldn&apos;t send your request</h3>
+            <p className="modal-copy">
+              Your details are still here. Please try again — or send them to us on WhatsApp or email in one tap and we&apos;ll take it from there.
+            </p>
+            <div className="modal-actions">
+              <button
+                onClick={() => {
+                  setSendFailed(false);
+                  completeNow();
+                }}
+                className="brand-btn-gold w-full"
+              >
+                Try again
+              </button>
+              <a
+                href={`${WHATSAPP_URL}?text=${encodeURIComponent(requestSummary())}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="brand-btn-whatsapp flex-1"
+              >
+                <MessageCircle size={18} aria-hidden="true" /> Send on WhatsApp
+              </a>
+              <a
+                href={`mailto:Dumisani@smtravel.co.za?subject=${encodeURIComponent('Booking request from website')}&body=${encodeURIComponent(requestSummary())}`}
+                className="brand-btn-secondary flex-1"
+              >
+                Send by email
+              </a>
+            </div>
+            <button type="button" onClick={() => setSendFailed(false)} className="smt-btn-text text-sm">
+              Back to my request
+            </button>
+          </div>
+        </Modal>
+      )}
+
       {/* Thank-you popup */}
       {done && (
         <Modal labelledBy="smt-thanks-title">
@@ -555,7 +659,13 @@ export default function Page() {
               )}
             </p>
             <div className="rounded-xl px-5 py-3 text-sm" style={{ background: '#F5F7FB', border: '1px solid #E3E7EF', color: '#4F596C' }}>
-              You will receive a confirmation email for your booking.
+              {bookingRef ? (
+                <>
+                  Your reference: <strong style={{ color: '#0E1E4A' }}>{bookingRef}</strong>. A confirmation email is on its way.
+                </>
+              ) : (
+                'You will receive a confirmation email for your booking.'
+              )}
             </div>
             <div className="modal-actions">
               <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="brand-btn-whatsapp flex-1">
