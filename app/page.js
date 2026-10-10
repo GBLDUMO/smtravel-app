@@ -1,11 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { ArrowRight, BedDouble, Car, Check, MessageCircle, Plane, PlaneLanding } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowRight, BedDouble, Car, Check, MessageCircle, Plane, PlaneLanding, Plus, X } from 'lucide-react';
 
-const WHATSAPP_URL = 'https://wa.me/971582003251';
-
-// Components (no LogoHeader)
 import Modal from '@/components/Modal';
 import Field from '@/components/Field';
 
@@ -15,8 +12,18 @@ import CarHire from '@/components/CarHire';
 import AirportTransfer from '@/components/AirportTransfer';
 
 // Shared (order must match: Hotel, Flights, Car Hire, Airport Transfer)
-import { SECTIONS, PROMPTABLE } from '@/lib/constants';
+import { SECTIONS } from '@/lib/constants';
 import { isRequiredFilledFactory } from '@/lib/helpers';
+
+const WHATSAPP_URL = 'https://wa.me/971582003251';
+
+// Display copy per service (index matches SECTIONS)
+const SERVICES = [
+  { title: 'Hotel booking', short: 'Hotel', button: 'Hotel Booking', blurb: 'Hotels, lodges and stays beyond the major cities', Icon: BedDouble },
+  { title: 'Flights', short: 'Flights', button: 'Flights', blurb: 'Domestic, regional and international', Icon: Plane },
+  { title: 'Car hire', short: 'Car hire', button: 'Car Hire', blurb: 'Self-drive, collected where you land', Icon: Car },
+  { title: 'Airport transfer', short: 'Airport transfer', button: 'Airport Transfer', blurb: 'Chauffeured, airport to hotel', Icon: PlaneLanding },
+];
 
 // ---- initial state slices (dropdowns start BLANK)
 function initialContact() {
@@ -29,32 +36,23 @@ function initialHotel() {
     checkOut: '',
     nights: 0,
     adults: 1,
-    hotelCategory: '', // blank
-    mealType: '',      // blank (TRIGGER for Hotel)
-    roomType: '',      // blank
+    hotelCategory: '',
+    mealType: '', // the back office treats a hotel as requested only when this is filled
+    roomType: '',
     specificHotel: '',
     notes: '',
   };
 }
 function initialFlights() {
-  return {
-    from: '',
-    to: '',
-    departDate: '',
-    returnDate: '',
-    tripType: '',
-    segments: [], // <-- add this
-  };
+  return { from: '', to: '', departDate: '', returnDate: '', tripType: '', segments: [] };
 }
-
 function initialCar() {
   return { carPickup: '', carReturn: '', carPickupDate: '', carReturnDate: '', carType: '', carNotes: '' };
 }
-
 function initialTransfer() {
-  // TRIGGER = tType
   return { tFrom: '', tTo: '', tDate: '', tType: '' };
 }
+const NONE_SELECTED = { 0: false, 1: false, 2: false, 3: false };
 
 export default function Page() {
   // theme (CSS variables)
@@ -76,11 +74,10 @@ export default function Page() {
     '--brand-green-15': '#1f7a4515',
     '--brand-green-33': '#1f7a4533',
   };
-  // Plain light page behind the booking form (the homepage hero covers it)
-  const gradientBg = 'var(--brand-cloud)';
 
-  // which section: null = landing, 0..3 = active section
-  const [tab, setTab] = useState(null);
+  // 'landing' = choose services, 'form' = one page with every chosen service
+  const [view, setView] = useState('landing');
+  const [selected, setSelected] = useState(NONE_SELECTED);
 
   // form slices
   const [contact, setContact] = useState(initialContact());
@@ -89,59 +86,38 @@ export default function Page() {
   const [car, setCar] = useState(initialCar());
   const [transfer, setTransfer] = useState(initialTransfer());
 
-  // flow flags
-  // enabled[1], enabled[2], enabled[3] correspond to Flights, Car Hire, Airport Transfer promptable sections
-  const [enabled, setEnabled] = useState({ 1: undefined, 2: undefined, 3: undefined });
-  const [confirmSection, setConfirmSection] = useState(null);
-
-  // UX
-  const [sending, setSending] = useState(false);
-  const [done, setDone] = useState(false); // drives the popup
-
   // car “touched” flags for mirroring
   const [carPickupTouched, setCarPickupTouched] = useState(false);
   const [carReturnTouched, setCarReturnTouched] = useState(false);
 
-  // turn off cross-section auto-fill after "Complete"
-  const [allowAutoFill, setAllowAutoFill] = useState(true);
+  // UX
+  const [sending, setSending] = useState(false);
+  const [done, setDone] = useState(false);
+  const [missing, setMissing] = useState([]); // indexes of chosen services with required fields empty
+  const [contactMissing, setContactMissing] = useState(false);
 
-  // validation checker bound to state
-  const isRequiredFilled = isRequiredFilledFactory({ hotel, flights, car, transfer, enabled });
+  const chosen = SERVICES.map((_, i) => i).filter((i) => selected[i]);
+  const enabled = { 1: !!selected[1], 2: !!selected[2], 3: !!selected[3] };
+  const baseRequired = isRequiredFilledFactory({ hotel, flights, car, transfer, enabled });
 
-  function onLandingClick(i) {
-    if (PROMPTABLE.has(i)) setEnabled((prev) => ({ ...prev, [i]: true }));
-    setTab(i);
+  // Required fields per service (base rules + the field the back office needs to detect the service)
+  function isComplete(i) {
+    if (!baseRequired(i)) return false;
+    if (i === 0) return !!hotel.mealType;
+    if (i === 1) return !!flights.tripType;
+    if (i === 2) return !!car.carType;
+    return true;
   }
 
-  function findNextIndex(start) {
-    let i = start + 1;
-    while (i < SECTIONS.length && enabled[i] === false) i++;
-    return Math.min(i, SECTIONS.length - 1);
+  function toggle(i) {
+    setSelected((prev) => ({ ...prev, [i]: !prev[i] }));
+    setMissing((m) => m.filter((x) => x !== i));
   }
 
-  function goNext() {
-    if (tab === null) return;
-    if (!isRequiredFilled(tab)) {
-      alert('Please fill the required fields for this section.');
-      return;
-    }
-    const candidate = findNextIndex(tab);
-    if (PROMPTABLE.has(candidate) && enabled[candidate] === undefined) {
-      setConfirmSection(candidate);
-      return;
-    }
-    setTab(candidate);
-  }
-
-  function includeSection(i) {
-    setEnabled((prev) => ({ ...prev, [i]: true }));
-    setConfirmSection(null);
-    setTab(i);
-  }
-  function skipSection(i) {
-    setEnabled((prev) => ({ ...prev, [i]: false }));
-    setConfirmSection(null);
-    setTab(findNextIndex(i));
+  function startForm() {
+    if (chosen.length === 0) return;
+    setView('form');
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0 });
   }
 
   async function post(payload) {
@@ -156,89 +132,117 @@ export default function Page() {
     }
   }
 
-  // ----- FIXED: async functions only once, no stray code after them
-  async function submitFull() {
-    if (tab === null || !isRequiredFilled(tab)) return;
-    setSending(true);
-    await post({ contact, hotel, flights, car, transfer, enabled });
-    setSending(false);
-    thankAndReset(5000);
-  }
-
-  async function completeNow() {
-    if (tab === null || !isRequiredFilled(tab)) {
-      alert('Please finish the required fields first.');
+  async function submit() {
+    const needContact = !contact.fullName.trim() || !contact.email.trim();
+    const incomplete = chosen.filter((i) => !isComplete(i));
+    setContactMissing(needContact);
+    setMissing(incomplete);
+    if (needContact || incomplete.length) {
+      const first = needContact ? 'smt-contact' : `smt-service-${incomplete[0]}`;
+      document.getElementById(first)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
-    // stop auto-filling later sections so only the completed section is sent
-    setAllowAutoFill(false);
 
     setSending(true);
+    // Services the traveller did not choose are sent blank, so the back office only sees what was requested
     await post({
       contact,
-      hotel,
-      flights,
-      car,
-      transfer,
+      hotel: selected[0] ? hotel : initialHotel(),
+      flights: selected[1] ? flights : initialFlights(),
+      car: selected[2] ? car : initialCar(),
+      transfer: selected[3]
+        ? {
+            ...transfer,
+            tFrom: transfer.tFrom || (selected[1] ? flights.to : ''),
+            tType: transfer.tType || 'One way',
+          }
+        : initialTransfer(),
       enabled,
-      endedEarly: true,
-      endedAt: SECTIONS[tab],
+      services: chosen.map((i) => SECTIONS[i]),
     });
     setSending(false);
-    thankAndReset(5000);
+    setDone(true);
   }
-  // ----- end fixed area
 
   function resetAll() {
     setContact(initialContact());
     setHotel(initialHotel());
     setFlights(initialFlights());
-    setTransfer(initialTransfer());
     setCar(initialCar());
-    setEnabled({ 1: undefined, 2: undefined, 3: undefined });
+    setTransfer(initialTransfer());
     setCarPickupTouched(false);
     setCarReturnTouched(false);
-    setConfirmSection(null);
-    setTab(null);
-    setAllowAutoFill(true);
+    setSelected(NONE_SELECTED);
+    setMissing([]);
+    setContactMissing(false);
+    setView('landing');
   }
 
-  function thankAndReset(ms) {
-    setDone(true); // show centered popup
-    setTimeout(() => {
-      setDone(false);
-      resetAll(); // dropdowns reset to blank because initial*() return '' for selects
-    }, ms);
-  }
-
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'production') return;
-    const root = document.querySelector('[data-smt-root]');
-    const ok = root && getComputedStyle(root).getPropertyValue('--brand-navy').trim() === '#0e1e4a';
-    console.table([{ test: 'CSS var --brand-navy set', pass: !!ok }]);
-  }, []);
-
-  // --- NEW: helper to know if we're on the last step
-  const isLast = tab === SECTIONS.length - 1;
-
-  // Display names (SECTIONS stays unchanged because it is sent to the back office)
-  const STEP_TITLES = ['Hotel booking', 'Flights', 'Car hire', 'Airport transfer'];
-  const STEP_SHORT = ['Hotel', 'Flights', 'Car hire', 'Airport transfer'];
-  const STEP_LEGENDS = ['Your stay', 'Your flight', 'Your vehicle', 'Your transfer'];
-  const STEP_ICONS = [BedDouble, Plane, Car, PlaneLanding];
-  const PROMPT_COPY = {
-    1: { q: 'Do you need flights?', yes: 'Yes, add flights' },
-    2: { q: 'Do you need car hire?', yes: 'Yes, add car hire' },
-    3: { q: 'Do you need an airport transfer?', yes: 'Yes, add a transfer' },
-  };
   const firstName = (contact.fullName || '').trim().split(/\s+/)[0];
 
-  return (
-    <div data-smt-root className="min-h-screen" style={{ ...themeVars, background: gradientBg }}>
-      <SiteHeader onHome={tab === null ? undefined : () => setTab(null)} />
+  // ---- the form for one service, with the same cross-filling as before
+  function renderService(i) {
+    if (i === 0)
+      return (
+        <HotelBooking
+          hotel={hotel}
+          setHotel={(h) => {
+            if (h.checkIn && !car.carPickupDate) setCar({ ...car, carPickupDate: h.checkIn });
+            if (h.checkIn && !flights.departDate) setFlights({ ...flights, departDate: h.checkIn });
+            if (h.checkIn && !transfer.tDate) setTransfer({ ...transfer, tDate: h.checkIn });
+            setHotel(h);
+          }}
+        />
+      );
+    if (i === 1)
+      return (
+        <Flights
+          flights={flights}
+          setFlights={(nf) => {
+            const nextCar = { ...car };
+            if (!carPickupTouched && nf.to) {
+              nextCar.carPickup = nf.to;
+              if (!carReturnTouched) nextCar.carReturn = nf.to;
+            }
+            setCar(nextCar);
+            setFlights(nf);
+          }}
+        />
+      );
+    if (i === 2)
+      return (
+        <CarHire
+          car={car}
+          setCar={(nc) => {
+            if (nc.carPickup !== car.carPickup && !carPickupTouched) setCarPickupTouched(true);
+            if (nc.carReturn !== car.carReturn && !carReturnTouched) setCarReturnTouched(true);
+            if (!carReturnTouched && nc.carPickup !== car.carPickup) nc = { ...nc, carReturn: nc.carPickup };
+            setCar(nc);
+          }}
+        />
+      );
+    return (
+      <AirportTransfer
+        transfer={transfer}
+        flightsTo={selected[1] ? flights.to : ''}
+        setTransfer={setTransfer}
+      />
+    );
+  }
 
-      {/* Landing */}
-      {tab === null ? (
+  const MISSING_HINT = [
+    'Please add the destination, check-in and check-out dates, and meal type.',
+    'Please add where you are flying from and to, and the trip type.',
+    'Please add the pickup and return details, return date, and car type.',
+    'Please add where the transfer goes to and the date.',
+  ];
+
+  return (
+    <div data-smt-root className="min-h-screen" style={{ ...themeVars, background: 'var(--brand-cloud)' }}>
+      <SiteHeader onHome={view === 'landing' ? undefined : () => setView('landing')} />
+
+      {view === 'landing' ? (
+        /* ---------------- Landing: choose one or more services ---------------- */
         <section className="relative isolate flex items-center overflow-hidden" style={{ minHeight: 'calc(100vh - 71px)' }}>
           <picture>
             <source srcSet="/images/call-center-hero.avif" type="image/avif" />
@@ -281,211 +285,163 @@ export default function Page() {
               </div>
             </div>
 
-            {/* Choose a service */}
+            {/* Choose services (multi-select) */}
             <div
-              className="mx-auto flex w-full max-w-[420px] flex-col gap-3.5 rounded-[22px] p-6 md:p-8"
-              style={{ background: 'rgba(14,30,74,0.9)', border: '1px solid rgba(255,255,255,0.18)', boxShadow: '0 24px 50px rgba(14,30,74,0.3)' }}
+              className="mx-auto flex w-full max-w-[440px] flex-col gap-3 rounded-[22px] p-6 md:p-8"
+              style={{ background: 'rgba(14,30,74,0.92)', border: '1px solid rgba(255,255,255,0.18)', boxShadow: '0 24px 50px rgba(14,30,74,0.3)' }}
             >
-              <h2 className="mb-2 text-center text-[32px] font-semibold text-white md:text-[40px]">Choose a service</h2>
-              {SECTIONS.map((_, i) => {
-                const Icon = STEP_ICONS[i];
+              <h2 className="m-0 text-center text-[32px] font-semibold text-white md:text-[40px]">What do you need?</h2>
+              <p className="m-0 mb-2 text-center text-sm" style={{ color: '#C9D1E4' }}>Tick everything for this trip — one form covers it all.</p>
+              {SERVICES.map((s, i) => {
+                const on = !!selected[i];
                 return (
-                  <button key={i} type="button" onClick={() => onLandingClick(i)} className="smt-service-btn">
-                    <Icon size={22} strokeWidth={1.9} aria-hidden="true" />
-                    <span className="flex-1 text-left">{['Hotel Booking', 'Flights', 'Car Hire', 'Airport Transfer'][i]}</span>
-                    <ArrowRight size={18} aria-hidden="true" className="smt-service-arrow" />
+                  <button
+                    key={i}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => toggle(i)}
+                    className="smt-pick"
+                    data-on={on ? 'true' : 'false'}
+                  >
+                    <s.Icon size={22} strokeWidth={1.9} aria-hidden="true" className="smt-pick-icon" />
+                    <span className="flex-1 text-left">{s.button}</span>
+                    <span className="smt-pick-box" aria-hidden="true">
+                      {on && <Check size={16} strokeWidth={3} />}
+                    </span>
                   </button>
                 );
               })}
+              <button
+                type="button"
+                onClick={startForm}
+                disabled={chosen.length === 0}
+                className="brand-btn-gold mt-2 w-full"
+              >
+                {chosen.length === 0
+                  ? 'Select at least one service'
+                  : `Continue with ${chosen.length} service${chosen.length > 1 ? 's' : ''}`}
+                {chosen.length > 0 && <ArrowRight size={18} aria-hidden="true" />}
+              </button>
             </div>
           </div>
         </section>
       ) : (
+        /* ---------------- One page with every chosen service ---------------- */
         <div className="mx-auto max-w-6xl px-4 pb-16 pt-6 md:px-8 md:pt-8">
-          {/* Step bar */}
-          <ol aria-label="Booking steps" className="m-0 grid list-none grid-cols-4 gap-2 p-0 md:gap-3">
-            {SECTIONS.map((_, i) => {
-              const active = i === tab;
-              const skipped = enabled[i] === false;
-              const done = i < tab && !skipped;
-              return (
-                <li
-                  key={i}
-                  aria-current={active ? 'step' : undefined}
-                  className="flex min-w-0 flex-col items-center gap-1.5 rounded-xl px-2 py-2.5 text-center md:flex-row md:gap-3 md:px-4 md:py-3.5 md:text-left"
-                  style={{
-                    background: active ? '#0E1E4A' : '#FFFFFF',
-                    border: active ? '1px solid #0E1E4A' : '1px solid #E3E7EF',
-                    color: active ? '#FFFFFF' : done ? '#0E1E4A' : '#4F596C',
-                  }}
-                >
-                  <span
-                    className="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-full text-sm font-semibold"
-                    style={
-                      active
-                        ? { background: '#E5A50A', color: '#0E1E4A' }
-                        : done
-                        ? { background: '#1F7A45', color: '#FFFFFF' }
-                        : { border: '1px solid #CDD4E1' }
-                    }
-                  >
-                    {done ? <Check size={16} strokeWidth={3} aria-hidden="true" /> : i + 1}
-                  </span>
-                  <span className={`min-w-0 text-xs md:text-[15px] ${active ? 'font-semibold' : 'font-medium'}`}>
-                    {STEP_SHORT[i]}
-                    {skipped && <span className="block text-[11px] font-normal md:inline"> · skipped</span>}
-                  </span>
-                </li>
-              );
-            })}
-          </ol>
-
-          <div className="mt-6 flex flex-wrap items-start gap-7">
-            {/* Form card */}
-            <section className="min-w-0 overflow-hidden rounded-[18px] bg-white" style={{ flex: '999 1 640px', border: '1px solid #E3E7EF' }}>
-              <div className="flex flex-col gap-1.5 border-b px-5 pb-5 pt-6 md:px-8 md:pt-7" style={{ borderColor: '#E3E7EF' }}>
-                <div className="text-[13px] font-semibold tracking-[0.14em]" style={{ color: '#8A5A00' }}>
-                  STEP {tab + 1} OF {SECTIONS.length}{isLast ? ' · LAST STEP' : ''}
-                </div>
-                <h1 className="m-0 text-[34px] font-semibold md:text-[40px]" style={{ color: '#0E1E4A' }}>
-                  {STEP_TITLES[tab]}
+          <div className="flex flex-wrap items-start gap-7">
+            <div className="flex min-w-0 flex-col gap-5" style={{ flex: '999 1 640px' }}>
+              {/* Title + service chips */}
+              <section className="rounded-[18px] bg-white px-5 py-6 md:px-8 md:py-7" style={{ border: '1px solid #E3E7EF' }}>
+                <div className="text-[13px] font-semibold tracking-[0.14em]" style={{ color: '#8A5A00' }}>YOUR TRIP REQUEST</div>
+                <h1 className="m-0 mt-1 text-[34px] font-semibold md:text-[40px]" style={{ color: '#0E1E4A' }}>
+                  Tell us about your trip
                 </h1>
-              </div>
-
-              <div className="flex flex-col gap-7 px-5 py-6 md:px-8 md:py-7">
-                {/* Shared contact row */}
-                <fieldset className="m-0 flex flex-col gap-4 border-0 p-0">
-                  <legend className="mb-4 p-0 text-[17px] font-semibold" style={{ color: '#0E1E4A' }}>Lead traveller</legend>
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <Field label="Full name">
-                      <input
-                        className="brand-input w-full"
-                        autoComplete="name"
-                        value={contact.fullName}
-                        onChange={(e) => setContact({ ...contact, fullName: e.target.value })}
-                      />
-                    </Field>
-                    <Field label="Email">
-                      <input
-                        type="email"
-                        required
-                        autoComplete="email"
-                        className="brand-input w-full"
-                        value={contact.email}
-                        onChange={(e) => setContact({ ...contact, email: e.target.value })}
-                      />
-                    </Field>
-                    <Field label="Phone (with country code)">
-                      <input
-                        type="tel"
-                        autoComplete="tel"
-                        className="brand-input w-full"
-                        value={contact.phone}
-                        onChange={(e) => setContact({ ...contact, phone: e.target.value })}
-                      />
-                    </Field>
-                  </div>
-                </fieldset>
-
-                <div className="h-px" style={{ background: '#E3E7EF' }} />
-
-                <fieldset className="m-0 border-0 p-0">
-                  <legend className="mb-4 p-0 text-[17px] font-semibold" style={{ color: '#0E1E4A' }}>{STEP_LEGENDS[tab]}</legend>
-
-                  {tab === 0 && (
-                    <HotelBooking
-                      hotel={hotel}
-                      setHotel={(h) => {
-                        if (allowAutoFill) {
-                          if (h.checkIn && !car.carPickupDate) setCar({ ...car, carPickupDate: h.checkIn });
-                          if (h.checkIn && !flights.departDate) setFlights({ ...flights, departDate: h.checkIn });
+                <p className="m-0 mt-2 text-[15px]" style={{ color: '#4F596C' }}>
+                  Services in this request — tap to add or remove:
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {SERVICES.map((s, i) => {
+                    const on = !!selected[i];
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => toggle(i)}
+                        className="inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 text-sm font-semibold transition-colors"
+                        style={
+                          on
+                            ? { background: '#0E1E4A', color: '#FFFFFF', border: '1px solid #0E1E4A' }
+                            : { background: '#FFFFFF', color: '#1B3A9E', border: '1px dashed #9AA6BF' }
                         }
-                        setHotel(h);
-                      }}
-                    />
-                  )}
-
-                  {tab === 1 && enabled[1] !== false && (
-                    <Flights
-                      flights={flights}
-                      setFlights={(nf) => {
-                        if (allowAutoFill) {
-                          const nextCar = { ...car };
-                          if (!carPickupTouched && nf.to) {
-                            nextCar.carPickup = nf.to;
-                            if (!carReturnTouched) nextCar.carReturn = nf.to;
-                          }
-                          setCar(nextCar);
-                        }
-                        setFlights(nf);
-                      }}
-                    />
-                  )}
-
-                  {tab === 2 && enabled[2] !== false && (
-                    <CarHire
-                      car={car}
-                      setCar={(nc) => {
-                        if (nc.carPickup !== car.carPickup && !carPickupTouched) setCarPickupTouched(true);
-                        if (nc.carReturn !== car.carReturn && !carReturnTouched) setCarReturnTouched(true);
-                        if (!carReturnTouched && nc.carPickup !== car.carPickup) {
-                          nc = { ...nc, carReturn: nc.carPickup };
-                        }
-                        setCar(nc);
-                      }}
-                    />
-                  )}
-
-                  {tab === 3 && enabled[3] !== false && (
-                    <AirportTransfer
-                      transfer={transfer}
-                      flightsTo={allowAutoFill ? flights.to : ''}
-                      setTransfer={setTransfer}
-                    />
-                  )}
-                </fieldset>
-              </div>
-
-              {/* Buttons */}
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t px-5 py-5 md:px-8" style={{ borderColor: '#E3E7EF', background: '#FAFBFD' }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (tab === 0) setTab(null);
-                    else if (tab !== null) setTab(Math.max(0, tab - 1));
-                  }}
-                  className="smt-btn-text"
-                >
-                  ← {tab === 0 ? 'Back' : `Back to ${STEP_SHORT[tab - 1].toLowerCase()}`}
-                </button>
-
-                <div className="ml-auto flex flex-wrap gap-3">
-                  {isLast ? (
-                    <button onClick={completeNow} disabled={sending} className="brand-btn-gold">
-                      {sending ? 'Sending…' : 'Submit booking request'}
-                    </button>
-                  ) : (
-                    <>
-                      <button onClick={completeNow} disabled={sending} className="brand-btn-secondary">
-                        {sending ? 'Sending…' : tab === 0 ? 'Submit hotel only' : 'Submit request now'}
+                      >
+                        {on ? <Check size={16} strokeWidth={3} aria-hidden="true" /> : <Plus size={16} strokeWidth={2.4} aria-hidden="true" />}
+                        {s.short}
                       </button>
-                      <button onClick={goNext} className="brand-btn-primary">
-                        Continue to {STEP_SHORT[findNextIndex(tab)].toLowerCase()} →
-                      </button>
-                    </>
-                  )}
+                    );
+                  })}
                 </div>
-              </div>
-            </section>
+              </section>
+
+              {/* Lead traveller */}
+              <section id="smt-contact" className="scroll-mt-4 rounded-[18px] bg-white px-5 py-6 md:px-8 md:py-7" style={{ border: contactMissing ? '2px solid #B42318' : '1px solid #E3E7EF' }}>
+                <h2 className="m-0 mb-4 text-[26px] font-semibold" style={{ color: '#0E1E4A' }}>Lead traveller</h2>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <Field label="Full name">
+                    <input className="brand-input w-full" autoComplete="name" value={contact.fullName} onChange={(e) => setContact({ ...contact, fullName: e.target.value })} />
+                  </Field>
+                  <Field label="Email">
+                    <input type="email" required autoComplete="email" className="brand-input w-full" value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} />
+                  </Field>
+                  <Field label="Phone (with country code)">
+                    <input type="tel" autoComplete="tel" className="brand-input w-full" value={contact.phone} onChange={(e) => setContact({ ...contact, phone: e.target.value })} />
+                  </Field>
+                </div>
+                {contactMissing && <p className="m-0 mt-3 text-sm font-medium" style={{ color: '#B42318' }}>Please add your name and email so we can send your quote.</p>}
+              </section>
+
+              {/* One card per chosen service */}
+              {chosen.map((i) => {
+                const s = SERVICES[i];
+                const isMissing = missing.includes(i);
+                return (
+                  <section
+                    key={i}
+                    id={`smt-service-${i}`}
+                    className="scroll-mt-4 overflow-hidden rounded-[18px] bg-white"
+                    style={{ border: isMissing ? '2px solid #B42318' : '1px solid #E3E7EF' }}
+                  >
+                    <div className="flex items-center gap-3 border-b px-5 py-4 md:px-8" style={{ borderColor: '#E3E7EF', background: '#FAFBFD' }}>
+                      <span className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: '#EEF1F8', color: '#1B3A9E' }}>
+                        <s.Icon size={22} strokeWidth={1.9} aria-hidden="true" />
+                      </span>
+                      <h2 className="m-0 flex-1 text-[26px] font-semibold" style={{ color: '#0E1E4A' }}>{s.title}</h2>
+                      <button
+                        type="button"
+                        onClick={() => toggle(i)}
+                        className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full px-3 text-sm font-medium"
+                        style={{ color: '#4F596C', background: 'transparent', border: '1px solid #E3E7EF' }}
+                        aria-label={`Remove ${s.title}`}
+                      >
+                        <X size={15} aria-hidden="true" /> Remove
+                      </button>
+                    </div>
+                    <div className="px-5 py-6 md:px-8">
+                      {renderService(i)}
+                      {isMissing && <p className="m-0 mt-4 text-sm font-medium" style={{ color: '#B42318' }}>{MISSING_HINT[i]}</p>}
+                    </div>
+                  </section>
+                );
+              })}
+
+              {chosen.length === 0 && (
+                <section className="rounded-[18px] bg-white px-5 py-8 text-center md:px-8" style={{ border: '1px dashed #9AA6BF', color: '#4F596C' }}>
+                  Add at least one service above to continue.
+                </section>
+              )}
+
+              {/* Submit */}
+              <section className="flex flex-wrap items-center justify-between gap-4 rounded-[18px] px-5 py-5 md:px-8" style={{ background: '#0E1E4A' }}>
+                <div className="min-w-0 text-white">
+                  <div className="text-sm" style={{ color: '#C9D1E4' }}>You are requesting</div>
+                  <div className="text-[17px] font-semibold">
+                    {chosen.length ? chosen.map((i) => SERVICES[i].short).join(' · ') : 'No services yet'}
+                  </div>
+                </div>
+                <button onClick={submit} disabled={sending || chosen.length === 0} className="brand-btn-gold">
+                  {sending ? 'Sending…' : 'Submit booking request'}
+                </button>
+              </section>
+            </div>
 
             {/* Side panel */}
-            <aside className="flex flex-col gap-4" style={{ flex: '1 1 300px' }}>
+            <aside className="flex flex-col gap-4 md:sticky md:top-6" style={{ flex: '1 1 300px' }}>
               <div className="flex flex-col gap-4 rounded-[18px] bg-white p-6" style={{ border: '1px solid #E3E7EF' }}>
                 <div className="text-[17px] font-semibold" style={{ color: '#0E1E4A' }}>What happens next</div>
                 {[
-                  'Add the services you need, or submit after any step.',
+                  'Fill in the services you chose — add or remove any at the top.',
                   'Our team checks availability with our suppliers.',
-                  'You receive one quote by email.',
+                  'You receive one quote by email for the whole trip.',
                 ].map((t, i) => (
                   <div key={i} className="flex gap-3 text-sm leading-normal" style={{ color: '#4F596C' }}>
                     <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full text-[13px] font-semibold" style={{ background: '#EEF1F8', color: '#1B3A9E' }}>
@@ -512,33 +468,6 @@ export default function Page() {
         </div>
       )}
 
-      {/* Include/skip prompt */}
-      {confirmSection !== null && (() => {
-        const Icon = STEP_ICONS[confirmSection];
-        const copy = PROMPT_COPY[confirmSection];
-        return (
-          <Modal labelledBy="smt-prompt-title">
-            <div className="flex flex-col items-center gap-4 text-center">
-              <div className="flex h-[68px] w-[68px] items-center justify-center rounded-full" style={{ background: '#EEF1F8', color: '#1B3A9E' }}>
-                <Icon size={32} strokeWidth={1.8} aria-hidden="true" />
-              </div>
-              <h3 id="smt-prompt-title" className="modal-title">{copy.q}</h3>
-              <p className="modal-copy">
-                Add it now and we&apos;ll quote it together with the rest of your trip — or skip to the next step.
-              </p>
-              <div className="modal-actions">
-                <button onClick={() => skipSection(confirmSection)} className="brand-btn-secondary flex-1">
-                  No, skip
-                </button>
-                <button onClick={() => includeSection(confirmSection)} className="brand-btn-primary flex-1">
-                  {copy.yes}
-                </button>
-              </div>
-            </div>
-          </Modal>
-        );
-      })()}
-
       {/* Thank-you popup */}
       {done && (
         <Modal labelledBy="smt-thanks-title">
@@ -548,7 +477,8 @@ export default function Page() {
             </div>
             <h3 id="smt-thanks-title" className="modal-title">Request received</h3>
             <p className="modal-copy">
-              Thank you{firstName ? `, ${firstName}` : ''}. Our team is preparing your quote
+              Thank you{firstName ? `, ${firstName}` : ''}. Our team is preparing one quote for your{' '}
+              {chosen.map((i) => SERVICES[i].short.toLowerCase()).join(', ')}
               {contact.email ? (
                 <>
                   {' '}and will email it to <strong style={{ color: '#1B2232' }}>{contact.email}</strong>.
@@ -564,7 +494,13 @@ export default function Page() {
               <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="brand-btn-whatsapp flex-1">
                 <MessageCircle size={18} aria-hidden="true" /> WhatsApp us
               </a>
-              <button onClick={() => setDone(false)} className="brand-btn-primary flex-1">
+              <button
+                onClick={() => {
+                  setDone(false);
+                  resetAll();
+                }}
+                className="brand-btn-primary flex-1"
+              >
                 Done
               </button>
             </div>
@@ -699,6 +635,45 @@ export default function Page() {
         }
         .smt-service-btn:active {
           transform: translateY(1px);
+        }
+        .smt-pick {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          height: 60px;
+          padding: 0 1.25rem;
+          border-radius: 14px;
+          background: #fff;
+          color: #0e1e4a;
+          font-weight: 600;
+          font-size: 17px;
+          border: 2px solid #fff;
+          transition: background 0.15s, border-color 0.15s;
+        }
+        .smt-pick .smt-pick-icon {
+          color: #1b3a9e;
+        }
+        .smt-pick:hover {
+          border-color: #e5a50a;
+        }
+        .smt-pick[data-on='true'] {
+          background: #fdf3da;
+          border-color: #e5a50a;
+        }
+        .smt-pick-box {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 26px;
+          height: 26px;
+          border-radius: 8px;
+          border: 2px solid #9aa6bf;
+          color: #0e1e4a;
+          background: #fff;
+        }
+        .smt-pick[data-on='true'] .smt-pick-box {
+          background: #e5a50a;
+          border-color: #e5a50a;
         }
         .modal-backdrop {
           position: fixed;
