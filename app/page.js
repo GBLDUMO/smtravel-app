@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowRight, BedDouble, Car, Check, MessageCircle, Plane, PlaneLanding } from 'lucide-react';
+import { ArrowRight, BedDouble, Car, Check, MessageCircle, Plane } from 'lucide-react';
+import MinibusIcon from '@/components/MinibusIcon';
 
 const WHATSAPP_URL = 'https://wa.me/971582003251';
 
@@ -221,7 +222,7 @@ export default function Page() {
       if (car.carNotes) lines.push(`Notes: ${car.carNotes}`);
     }
     if (order.includes(3)) {
-      lines.push('', 'AIRPORT TRANSFER', `From: ${transfer.tFrom || flights.to || '-'}  To: ${transfer.tTo}`, `Date: ${transfer.tDate}  Type: ${transfer.tType || 'One way'}`);
+      lines.push('', 'TRANSFERS', `From: ${transfer.tFrom || flights.to || '-'}  To: ${transfer.tTo}`, `Date: ${transfer.tDate}  Type: ${transfer.tType || 'One way'}`);
     }
     return lines.join('\n');
   }
@@ -304,10 +305,10 @@ export default function Page() {
   const isLast = tab === SECTIONS.length - 1;
 
   // Display names (SECTIONS stays unchanged because it is sent to the back office)
-  const STEP_TITLES = ['Hotel booking', 'Flights', 'Car hire', 'Airport transfer'];
-  const STEP_SHORT = ['Hotel', 'Flights', 'Car hire', 'Airport transfer'];
+  const STEP_TITLES = ['Hotel booking', 'Flights', 'Car hire', 'Transfers'];
+  const STEP_SHORT = ['Hotel', 'Flights', 'Car hire', 'Transfers'];
   const STEP_LEGENDS = ['Your stay', 'Your flight', 'Your vehicle', 'Your transfer'];
-  const STEP_ICONS = [BedDouble, Plane, Car, PlaneLanding];
+  const STEP_ICONS = [BedDouble, Plane, Car, MinibusIcon];
   const remaining = SECTIONS.map((_, i) => i).filter((i) => !order.includes(i));
   const position = Math.max(0, order.indexOf(tab));
   const firstName = (contact.fullName || '').trim().split(/\s+/)[0];
@@ -348,7 +349,7 @@ export default function Page() {
               </p>
               <p className="m-0 text-[15px] leading-relaxed md:text-base" style={{ color: '#4F596C' }}>
                 <strong className="font-semibold" style={{ color: '#1B2232' }}>Solid Matter Travel</strong> is your single hub for
-                requests across hotels, flights, car hire and airport transfers. One smart form, auto-filled details, and
+                requests across hotels, flights, car hire and transfers. One smart form, auto-filled details, and
                 direct routing to our team for fast confirmations.
               </p>
               <div className="flex flex-wrap gap-x-5 gap-y-2 border-t pt-3.5 text-sm" style={{ borderColor: '#E3E7EF', color: '#4F596C' }}>
@@ -372,7 +373,7 @@ export default function Page() {
                 return (
                   <button key={i} type="button" onClick={() => onLandingClick(i)} className="smt-service-btn">
                     <Icon size={22} strokeWidth={1.9} aria-hidden="true" />
-                    <span className="flex-1 text-left">{['Hotel Booking', 'Flights', 'Car Hire', 'Airport Transfer'][i]}</span>
+                    <span className="flex-1 text-left">{['Hotel Booking', 'Flights', 'Car Hire', 'Transfers'][i]}</span>
                     <ArrowRight size={18} aria-hidden="true" className="smt-service-arrow" />
                   </button>
                 );
